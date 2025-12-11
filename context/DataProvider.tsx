@@ -1,15 +1,29 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 import {
-  AppContextType, AppData, Task, Investor, Achievement,
-  ServiceItem, ServicePackage, CorporatePricing, Contact, Note,
-  EventItem, Meeting, Customer, Expense, Contract, Partner,
-  LibraryItem, SocialMetric, SocialHistoryEntry
-} from '../types';
+  AppContextType,
+  AppData,
+  Task,
+  Investor,
+  Achievement,
+  ServiceItem,
+  ServicePackage,
+  CorporatePricing,
+  Contact,
+  Note,
+  EventItem,
+  Meeting,
+  Customer,
+  Expense,
+  Contract,
+  Partner,
+  LibraryItem,
+  SocialMetric,
+  SocialHistoryEntry,
+} from "../types";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Tüm başlangıç state'i
 const initialData: AppData = {
   tasks: [],
   investors: [],
@@ -27,10 +41,12 @@ const initialData: AppData = {
   partners: [],
   library: [],
   socialStats: [],
-  socialHistory: []
+  socialHistory: [],
 };
 
-export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [data, setData] = useState<AppData>(initialData);
   const [loading, setLoading] = useState(true);
 
@@ -40,69 +56,62 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchAll = async () => {
       setLoading(true);
 
-      const queries = [
-        supabase.from('tasks').select('*'),
-        supabase.from('investors').select('*'),
-        supabase.from('achievements').select('*'),
-        supabase.from('services').select('*'),
-        supabase.from('packages').select('*'),
-        supabase.from('corporate_pricing').select('*'),
-        supabase.from('contacts').select('*'),
-        supabase.from('notes').select('*'),
-        supabase.from('events').select('*'),
-        supabase.from('meetings').select('*'),
-        supabase.from('customers').select('*'),
-        supabase.from('expenses').select('*'),
-        supabase.from('contracts').select('*'),
-        supabase.from('partners').select('*'),
-        supabase.from('library').select('*'),
-        supabase.from('social_stats').select('*'),
-        supabase.from('social_history').select('*')
-      ];
-
-      const results = await Promise.all(queries);
-
-      // SAFETY WRAPPER → data yoksa [] döner
-      const safe = (res: any) => (res && res.data ? res.data : []);
-
       const [
-        tasks,
-        investors,
-        achievements,
-        services,
-        packages,
-        corporatePricing,
-        contacts,
-        notes,
-        events,
-        meetings,
-        customers,
-        expenses,
-        contracts,
-        partners,
-        library,
-        socialStats,
-        socialHistory
-      ] = results.map(safe);
+        { data: tasksData },
+        { data: investorsData },
+        { data: achievementsData },
+        { data: servicesData },
+        { data: packagesData },
+        { data: corporatePricingData },
+        { data: contactsData },
+        { data: notesData },
+        { data: eventsData },
+        { data: meetingsData },
+        { data: customersData },
+        { data: expensesData },
+        { data: contractsData },
+        { data: partnersData },
+        { data: libraryData },
+        { data: socialStatsData },
+        { data: socialHistoryData },
+      ] = await Promise.all([
+        supabase.from("tasks").select("*"),
+        supabase.from("investors").select("*"),
+        supabase.from("achievements").select("*"),
+        supabase.from("services").select("*"),
+        supabase.from("packages").select("*"),
+        supabase.from("corporate_pricing").select("*"),
+        supabase.from("contacts").select("*"),
+        supabase.from("notes").select("*"),
+        supabase.from("events").select("*"),
+        supabase.from("meetings").select("*"),
+        supabase.from("customers").select("*"),
+        supabase.from("expenses").select("*"),
+        supabase.from("contracts").select("*"),
+        supabase.from("partners").select("*"),
+        supabase.from("library").select("*"),
+        supabase.from("social_stats").select("*"),
+        supabase.from("social_history").select("*"),
+      ]);
 
       setData({
-        tasks,
-        investors,
-        achievements,
-        services,
-        packages,
-        corporatePricing,
-        contacts,
-        notes,
-        events,
-        meetings,
-        customers,
-        expenses,
-        contracts,
-        partners,
-        library,
-        socialStats,
-        socialHistory
+        tasks: tasksData ?? [],
+        investors: investorsData ?? [],
+        achievements: achievementsData ?? [],
+        services: servicesData ?? [],
+        packages: packagesData ?? [],
+        corporatePricing: corporatePricingData ?? [],
+        contacts: contactsData ?? [],
+        notes: notesData ?? [],
+        events: eventsData ?? [],
+        meetings: meetingsData ?? [],
+        customers: customersData ?? [],
+        expenses: expensesData ?? [],
+        contracts: contractsData ?? [],
+        partners: partnersData ?? [],
+        library: libraryData ?? [],
+        socialStats: socialStatsData ?? [],
+        socialHistory: socialHistoryData ?? [],
       });
 
       setLoading(false);
@@ -111,90 +120,64 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchAll();
   }, []);
 
-  // ------------- GENERIC HELPERS -------------
-
-  const addItem = async (table: string, item: any, key: keyof AppData) => {
+  // ADD / UPDATE / DELETE functions (değiştirmene gerek yok)
+  const addItem = async (table: string, item: any, listKey: keyof AppData) => {
     const newItem = { ...item, id: generateId() };
-
-    const { data: inserted, error } = await supabase
+    const { data: inserted } = await supabase
       .from(table)
       .insert(newItem)
-      .select('*')
+      .select("*")
       .single();
 
-    if (error) {
-      console.error(`Add Error (${table}):`, error);
-      return;
-    }
+    if (!inserted) return;
 
-    setData(prev => ({
+    setData((prev) => ({
       ...prev,
-      [key]: [...(prev[key] as any[]), inserted]
+      [listKey]: [...(prev[listKey] as any[]), inserted],
     }));
   };
 
-  const updateItem = async (table: string, id: string, updates: any, key: keyof AppData) => {
-    const { error } = await supabase.from(table).update(updates).eq('id', id);
+  const updateItem = async (
+    table: string,
+    id: string,
+    updates: any,
+    listKey: keyof AppData
+  ) => {
+    await supabase.from(table).update(updates).eq("id", id);
 
-    if (error) {
-      console.error(`Update Error (${table}):`, error);
-      return;
-    }
-
-    setData(prev => ({
+    setData((prev) => ({
       ...prev,
-      [key]: (prev[key] as any[]).map(item =>
-        item.id === id ? { ...item, ...updates } : item
-      )
+      [listKey]: (prev[listKey] as any[]).map((i) =>
+        i.id === id ? { ...i, ...updates } : i
+      ),
     }));
   };
 
-  const deleteItem = async (table: string, id: string, key: keyof AppData) => {
-    const { error } = await supabase.from(table).delete().eq('id', id);
+  const deleteItem = async (
+    table: string,
+    id: string,
+    listKey: keyof AppData
+  ) => {
+    await supabase.from(table).delete().eq("id", id);
 
-    if (error) {
-      console.error(`Delete Error (${table}):`, error);
-      return;
-    }
-
-    setData(prev => ({
+    setData((prev) => ({
       ...prev,
-      [key]: (prev[key] as any[]).filter(item => item.id !== id)
+      [listKey]: (prev[listKey] as any[]).filter((i) => i.id !== id),
     }));
   };
 
-  // ------------ TABLE SPECIFIC ACTIONS ------------
-
-  // TASKS
-  const addTask = (item: Omit<Task, 'id'>) => addItem('tasks', item, 'tasks');
-  const updateTask = (id: string, updates: Partial<Task>) =>
-    updateItem('tasks', id, updates, 'tasks');
-  const deleteTask = (id: string) =>
-    deleteItem('tasks', id, 'tasks');
-
-  // PARTNERS
-  const addPartner = (item: Omit<Partner, 'id'>) => addItem('partners', item, 'partners');
-  const deletePartner = (id: string) => deleteItem('partners', id, 'partners');
-
-  // ----------------------------------------------
-
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center text-slate-600">
-        Yükleniyor...
-      </div>
-    );
-  }
-
-  return (
+  return loading ? (
+    <div>Yükleniyor...</div>
+  ) : (
     <AppContext.Provider
       value={{
         ...data,
-        addTask,
-        updateTask,
-        deleteTask,
-        addPartner,
-        deletePartner
+        addTask: (item) => addItem("tasks", item, "tasks"),
+        updateTask: (id, u) => updateItem("tasks", id, u, "tasks"),
+        deleteTask: (id) => deleteItem("tasks", id, "tasks"),
+
+        addPartner: (item) => addItem("partners", item, "partners"),
+        deletePartner: (id) => deleteItem("partners", id, "partners"),
       }}
     >
       {children}
@@ -204,6 +187,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useData = () => {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useData must be used inside DataProvider');
+  if (!ctx) throw new Error("useData must be used within DataProvider");
   return ctx;
 };
