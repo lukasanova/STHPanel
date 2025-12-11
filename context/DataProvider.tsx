@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { 
-  AppContextType, AppData, Task, Partner
-} from '../types';
+import { AppContextType, AppData, Task, Partner } from '../types';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -24,13 +22,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const [
         { data: tasks },
-        { data: partners }
+        { data: partners },
       ] = await Promise.all([
         supabase.from('tasks').select('*'),
         supabase.from('partners').select('*'),
       ]);
 
-      // 🚀 NULL gelirse bile güvenli şekilde state'e at
+      // null gelirse bile array yapıyoruz
       setData({
         tasks: tasks ?? [],
         partners: partners ?? [],
@@ -59,7 +57,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setData(prev => ({
       ...prev,
-      [listKey]: [...(prev[listKey] as any[]), inserted]
+      [listKey]: [...prev[listKey], inserted],
     }));
   };
 
@@ -75,7 +73,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       [listKey]: prev[listKey].map(item =>
         item.id === id ? { ...item, ...updates } : item
-      )
+      ),
     }));
   };
 
@@ -89,7 +87,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setData(prev => ({
       ...prev,
-      [listKey]: prev[listKey].filter(item => item.id !== id)
+      [listKey]: prev[listKey].filter(item => item.id !== id),
     }));
   };
 
