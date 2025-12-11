@@ -31,9 +31,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // EN ÖNEMLİ KISIM — undefined olanları asla bırakmıyoruz
       setData({
-        tasks: tasksData ?? [],
-        partners: partnersData ?? [],
-      });
+  tasks: tasks ?? [],
+  investors: investors ?? [],
+  achievements: achievements ?? [],
+  services: services ?? [],
+  packages: packages ?? [],
+  corporatePricing: corporatePricing ?? [],
+  contacts: contacts ?? [],
+  notes: notes ?? [],
+  events: events ?? [],
+  meetings: meetings ?? [],
+  customers: customers ?? [],
+  expenses: expenses ?? [],
+  contracts: contracts ?? [],
+  partners: partners ?? [],
+  library: library ?? [],
+  socialStats: socialStats ?? [],
+  socialHistory: socialHistory ?? [],
+});
+
 
       setLoading(false);
     };
