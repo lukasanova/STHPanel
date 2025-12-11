@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html lang="tr">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Solutions That Heal Yönetim Paneli</title>
 
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CDN - PRODUCTION SAFE MOD -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
 
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              primary: '#07363c',
-              secondary: '#334155',
-              accent: '#E4C19D',
+              primary: "#07363c",
+              secondary: "#334155",
+              accent: "#E4C19D",
             }
           }
         }
-      }
+      };
     </script>
 
     <style>
@@ -33,7 +33,7 @@
   <body>
     <div id="root"></div>
 
-    <!-- Vite bundle -->
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Main React app -->
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
