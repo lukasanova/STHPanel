@@ -126,9 +126,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // --- Generic Supabase Helpers ---
 
-  const addItem = async (table: string, item: any, listKey: keyof AppData) => {
-    const newItem = { ...item, id: generateId() };
-    
+const addItem = async (table: string, item: any, listKey: keyof AppData) => {
+  const { data: inserted, error } = await supabase
+    .from(table)
+    .insert(item)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error(`Error adding to ${table}:`, error);
+    return;
+  }
+
+  setData(prev => ({
+    ...prev,
+    [listKey]: [...(prev[listKey] as any[]), inserted]
+  }));
+};
+
     // Optimistic Update
     setData(prev => ({ ...prev, [listKey]: [...(prev[listKey] as any[]), newItem] }));
     

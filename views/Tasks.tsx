@@ -10,12 +10,26 @@ export const TasksView: React.FC = () => {
     title: '', assignee: '', dueDate: '', status: 'beklemede' as TaskStatus, priority: 'orta' as Priority
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    addTask(newTask);
-    setShowModal(false);
-    setNewTask({ title: '', assignee: '', dueDate: '', status: 'beklemede', priority: 'orta' });
-  };
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  addTask({
+    name: newTask.title,
+    assignee: newTask.assignee,
+    due_date: newTask.dueDate,
+    status: newTask.status,
+    priority: newTask.priority
+  });
+
+  setShowModal(false);
+  setNewTask({ 
+    title: '', 
+    assignee: '', 
+    dueDate: '', 
+    status: 'beklemede', 
+    priority: 'orta' 
+  });
+};
 
   const getStatusColor = (status: TaskStatus) => {
     switch(status) {
@@ -80,14 +94,14 @@ export const TasksView: React.FC = () => {
                 </tr>
               ) : sortedTasks.map((task) => (
                 <tr key={task.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-800">{task.title}</td>
+                  <td className="px-6 py-4 font-medium text-slate-800">{task.name}</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-slate-200 text-xs font-bold text-slate-600">
                       {task.assignee.charAt(0).toUpperCase()}
                     </span>
                     <span className="ml-2 text-slate-600">{task.assignee}</span>
                   </td>
-                  <td className="px-6 py-4 text-slate-600">{task.dueDate || '-'}</td>
+                  <td className="px-6 py-4 text-slate-600">{task.due_date || '-'}</td>
                   <td className="px-6 py-4">
                     <div className={`flex items-center font-medium ${getPriorityColor(task.priority)}`}>
                       <AlertCircle size={14} className="mr-1" />
