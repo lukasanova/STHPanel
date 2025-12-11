@@ -95,20 +95,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         socialStats: socialStats || [],
         socialHistory: socialHistory || [],
       });
-
       setLoading(false);
     };
 
     fetchAllData();
   }, []);
 
-  // -----------------------------------------------------
-  //  CORRECT addItem FUNCTION
-  // -----------------------------------------------------
+  // ---------------------------
+  // GENERIC SUPABASE HELPERS
+  // ---------------------------
+  
   const addItem = async (table: string, item: any, listKey: keyof AppData) => {
+    const newItem = { ...item, id: generateId() };
+
     const { data: inserted, error } = await supabase
       .from(table)
-      .insert(item)
+      .insert(newItem)
       .select('*')
       .single();
 
@@ -119,44 +121,61 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setData(prev => ({
       ...prev,
-      [listKey]: [...prev[listKey], inserted]
+      [listKey]: [...(prev[listKey] as any[]), inserted]
     }));
   };
 
-  // -----------------------------------------------------
-  //  UPDATE / DELETE (bunlar doğru)
-  // -----------------------------------------------------
-
   const updateItem = async (table: string, id: string, updates: any, listKey: keyof AppData) => {
+    const { error } = await supabase.from(table).update(updates).eq('id', id);
+    if (error) console.error(`Error updating ${table}:`, error);
+
     setData(prev => ({
       ...prev,
-      [listKey]: prev[listKey].map(item => item.id === id ? { ...item, ...updates } : item)
+      [listKey]: (prev[listKey] as any[]).map(item =>
+        item.id === id ? { ...item, ...updates } : item
+      )
     }));
-
-    await supabase.from(table).update(updates).eq('id', id);
   };
 
   const deleteItem = async (table: string, id: string, listKey: keyof AppData) => {
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) console.error(`Error deleting from ${table}:`, error);
+
     setData(prev => ({
       ...prev,
-      [listKey]: prev[listKey].filter(item => item.id !== id)
+      [listKey]: (prev[listKey] as any[]).filter(item => item.id !== id)
     }));
-
-    await supabase.from(table).delete().eq('id', id);
   };
 
-  // -----------------------------------------------------
-  //  SPECIFIC ACTIONS
-  // -----------------------------------------------------
+  // ---------------------------
+  // TABLE-SPECIFIC FUNCTIONS
+  // ---------------------------
 
-  const addTask = (task: Omit<Task, 'id'>) => addItem('tasks', task, 'tasks');
+  // TASKS
+  const addTask = (item: Omit<Task, 'id'>) => addItem('tasks', item, 'tasks');
   const updateTask = (id: string, updates: Partial<Task>) => updateItem('tasks', id, updates, 'tasks');
   const deleteTask = (id: string) => deleteItem('tasks', id, 'tasks');
+
+  // PARTNERS
+  const addPartner = (item: Omit<Partner, 'id'>) => addItem('partners', item, 'partners');
+  const deletePartner = (id: string) => deleteItem('partners', id, 'partners');
+
+  // (Diğer tablolar hazır, istersen onları da ekleyebilirim)
+
+  if (loading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div className="text-slate-600 font-medium">Veriler Yükleniyor...</div>
+      </div>
+    );
+  }
 
   return (
     <AppContext.Provider value={{
       ...data,
       addTask, updateTask, deleteTask,
+      addPartner, deletePartner
     }}>
       {children}
     </AppContext.Provider>
