@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Solutions That Heal Yönetim Paneli</title>
 
-    <!-- Tailwind CDN - PRODUCTION SAFE MOD -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <script>
       tailwind.config = {
@@ -21,19 +21,12 @@
         }
       };
     </script>
-
-    <style>
-      body {
-        background-color: #f8fafc;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      }
-    </style>
   </head>
 
   <body>
     <div id="root"></div>
 
-    <!-- Main React app -->
-    <script type="module" src="/src/index.tsx"></script>
+    <!-- VITE AUTO-IMPORT -->
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
