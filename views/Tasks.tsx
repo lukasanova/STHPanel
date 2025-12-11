@@ -4,9 +4,10 @@ import { Plus, Trash2, AlertCircle } from "lucide-react";
 import { TaskStatus, Priority } from "../types";
 
 export const TasksView: React.FC = () => {
-  const { tasks, addTask, updateTask, deleteTask } = useData();
-  const [showModal, setShowModal] = useState(false);
+  // ❗ tasks = [] diyerek hata engellenir
+  const { tasks = [], addTask, updateTask, deleteTask } = useData();
 
+  const [showModal, setShowModal] = useState(false);
   const [newTask, setNewTask] = useState({
     name: "",
     assignee: "",
