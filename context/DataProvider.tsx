@@ -15,18 +15,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [data, setData] = useState<AppData>(initialData);
   const [loading, setLoading] = useState(true);
 
+  // ----------------------------------------------------
+  // TÜM VERİLERİ SUPABASE'DEN ÇEK
+  // ----------------------------------------------------
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
 
-      const [{ data: tasks }, { data: partners }] = await Promise.all([
+      const [
+        { data: tasks },
+        { data: partners }
+      ] = await Promise.all([
         supabase.from('tasks').select('*'),
         supabase.from('partners').select('*'),
       ]);
 
+      // 🚀 NULL gelirse bile güvenli şekilde state'e at
       setData({
-        tasks: tasks || [],
-        partners: partners || [],
+        tasks: tasks ?? [],
+        partners: partners ?? [],
       });
 
       setLoading(false);
@@ -35,9 +42,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchAllData();
   }, []);
 
-  // ========================================================
-  // GENERIC INSERT (DOĞRU ŞEKLİ — optimistic yok!)
-  // ========================================================
+  // ----------------------------------------------------
+  // GENEL INSERT METHODU
+  // ----------------------------------------------------
   const addItem = async (table: string, item: any, listKey: keyof AppData) => {
     const { data: inserted, error } = await supabase
       .from(table)
@@ -50,18 +57,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Supabase’in döndürdüğü gerçek kayıt state’e eklenir
     setData(prev => ({
       ...prev,
       [listKey]: [...(prev[listKey] as any[]), inserted]
     }));
   };
 
-  // ========================================================
-  // UPDATE
-  // ========================================================
+  // ----------------------------------------------------
+  // UPDATE METHODU
+  // ----------------------------------------------------
   const updateItem = async (table: string, id: string, updates: any, listKey: keyof AppData) => {
     const { error } = await supabase.from(table).update(updates).eq('id', id);
+
     if (error) console.error(`Update error in ${table}:`, error);
 
     setData(prev => ({
@@ -72,11 +79,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  // ========================================================
-  // DELETE
-  // ========================================================
+  // ----------------------------------------------------
+  // DELETE METHODU
+  // ----------------------------------------------------
   const deleteItem = async (table: string, id: string, listKey: keyof AppData) => {
     const { error } = await supabase.from(table).delete().eq('id', id);
+
     if (error) console.error(`Delete error in ${table}:`, error);
 
     setData(prev => ({
@@ -85,23 +93,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  // ========================================================
-  //  TASKS
-  // ========================================================
-  const addTask = (item: Omit<Task, 'id'>) => addItem('tasks', item, 'tasks');
+  // ----------------------------------------------------
+  // TASKS
+  // ----------------------------------------------------
+  const addTask = (item: Omit<Task, 'id'>) =>
+    addItem('tasks', item, 'tasks');
+
   const updateTask = (id: string, updates: Partial<Task>) =>
     updateItem('tasks', id, updates, 'tasks');
-  const deleteTask = (id: string) => deleteItem('tasks', id, 'tasks');
 
-  // ========================================================
-  //  PARTNERS
-  // ========================================================
+  const deleteTask = (id: string) =>
+    deleteItem('tasks', id, 'tasks');
+
+  // ----------------------------------------------------
+  // PARTNERS
+  // ----------------------------------------------------
   const addPartner = (item: Omit<Partner, 'id'>) =>
     addItem('partners', item, 'partners');
+
   const deletePartner = (id: string) =>
     deleteItem('partners', id, 'partners');
 
-  // ========================================================
+  // ----------------------------------------------------
 
   if (loading) {
     return (
