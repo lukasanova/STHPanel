@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { AppContextType, AppData, Task, Partner } from '../types';
+import { 
+  AppContextType, AppData, Task, Partner,
+} from '../types';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -13,40 +15,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [data, setData] = useState<AppData>(initialData);
   const [loading, setLoading] = useState(true);
 
-  // ----------------------------------------------------
-  // TÜM VERİLERİ SUPABASE'DEN ÇEK
-  // ----------------------------------------------------
+  const generateId = () => crypto.randomUUID();
+
   useEffect(() => {
-    const fetchAllData = async () => {
+    const fetchAll = async () => {
       setLoading(true);
 
       const [
-        { data: tasks },
-        { data: partners },
+        { data: tasksData },
+        { data: partnersData }
       ] = await Promise.all([
         supabase.from('tasks').select('*'),
         supabase.from('partners').select('*'),
       ]);
 
-      // null gelirse bile array yapıyoruz
+      // EN ÖNEMLİ KISIM — undefined olanları asla bırakmıyoruz
       setData({
-        tasks: tasks ?? [],
-        partners: partners ?? [],
+        tasks: tasksData ?? [],
+        partners: partnersData ?? [],
       });
 
       setLoading(false);
     };
 
-    fetchAllData();
+    fetchAll();
   }, []);
 
-  // ----------------------------------------------------
-  // GENEL INSERT METHODU
-  // ----------------------------------------------------
-  const addItem = async (table: string, item: any, listKey: keyof AppData) => {
+  // -------------------------
+  // GENERIC INSERT FUNCTION
+  // -------------------------
+  const addItem = async (table: string, item: any, key: keyof AppData) => {
+    const newItem = { ...item, id: generateId() };
+
     const { data: inserted, error } = await supabase
       .from(table)
-      .insert(item)
+      .insert(newItem)
       .select('*')
       .single();
 
@@ -57,90 +60,45 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setData(prev => ({
       ...prev,
-      [listKey]: [...prev[listKey], inserted],
+      [key]: [...prev[key]!, inserted]
     }));
   };
 
-  // ----------------------------------------------------
-  // UPDATE METHODU
-  // ----------------------------------------------------
-  const updateItem = async (table: string, id: string, updates: any, listKey: keyof AppData) => {
-    const { error } = await supabase.from(table).update(updates).eq('id', id);
-
-    if (error) console.error(`Update error in ${table}:`, error);
+  const deleteItem = async (table: string, id: string, key: keyof AppData) => {
+    await supabase.from(table).delete().eq('id', id);
 
     setData(prev => ({
       ...prev,
-      [listKey]: prev[listKey].map(item =>
-        item.id === id ? { ...item, ...updates } : item
-      ),
+      [key]: prev[key]!.filter(i => i.id !== id)
     }));
   };
 
-  // ----------------------------------------------------
-  // DELETE METHODU
-  // ----------------------------------------------------
-  const deleteItem = async (table: string, id: string, listKey: keyof AppData) => {
-    const { error } = await supabase.from(table).delete().eq('id', id);
+  // ---- Specific Actions ----
+  const addTask = (item: Omit<Task, 'id'>) => addItem("tasks", item, "tasks");
+  const deleteTask = (id: string) => deleteItem("tasks", id, "tasks");
 
-    if (error) console.error(`Delete error in ${table}:`, error);
-
-    setData(prev => ({
-      ...prev,
-      [listKey]: prev[listKey].filter(item => item.id !== id),
-    }));
-  };
-
-  // ----------------------------------------------------
-  // TASKS
-  // ----------------------------------------------------
-  const addTask = (item: Omit<Task, 'id'>) =>
-    addItem('tasks', item, 'tasks');
-
-  const updateTask = (id: string, updates: Partial<Task>) =>
-    updateItem('tasks', id, updates, 'tasks');
-
-  const deleteTask = (id: string) =>
-    deleteItem('tasks', id, 'tasks');
-
-  // ----------------------------------------------------
-  // PARTNERS
-  // ----------------------------------------------------
-  const addPartner = (item: Omit<Partner, 'id'>) =>
-    addItem('partners', item, 'partners');
-
-  const deletePartner = (id: string) =>
-    deleteItem('partners', id, 'partners');
-
-  // ----------------------------------------------------
+  const addPartner = (item: Omit<Partner, 'id'>) => addItem("partners", item, "partners");
+  const deletePartner = (id: string) => deleteItem("partners", id, "partners");
 
   if (loading) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <div className="text-slate-600 font-medium">Veriler Yükleniyor...</div>
-      </div>
-    );
+    return <div>Yükleniyor...</div>;
   }
 
   return (
-    <AppContext.Provider
-      value={{
-        ...data,
-        addTask,
-        updateTask,
-        deleteTask,
-        addPartner,
-        deletePartner,
-      }}
-    >
+    <AppContext.Provider value={{
+      ...data,
+      addTask,
+      deleteTask,
+      addPartner,
+      deletePartner,
+    }}>
       {children}
     </AppContext.Provider>
   );
 };
 
 export const useData = () => {
-  const context = useContext(AppContext);
-  if (!context) throw new Error("useData must be used within DataProvider");
-  return context;
+  const c = useContext(AppContext);
+  if (!c) throw new Error("useData must be used inside DataProvider");
+  return c;
 };
