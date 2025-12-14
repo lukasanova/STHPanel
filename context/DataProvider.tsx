@@ -190,3 +190,14 @@ export const useData = () => {
   if (!ctx) throw new Error("useData must be used within DataProvider");
   return ctx;
 };
+
+<AppContext.Provider value={{
+  ...data,
+
+  addTask, updateTask, deleteTask,
+  addPartner, deletePartner,
+
+  addCustomer,
+  deleteCustomer
+}}>
+
