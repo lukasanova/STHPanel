@@ -57,6 +57,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchAll();
   }, []);
 
+  /* ---------------- GENERIC HELPERS ---------------- */
+
   const addItem = async (table: string, item: any, key: keyof AppData) => {
     const newItem = { ...item, id: generateId() };
 
@@ -78,13 +80,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteItem = async (table: string, id: string, key: keyof AppData) => {
-    await supabase.from(table).delete().eq("id", id);
+    const { error } = await supabase.from(table).delete().eq("id", id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
 
     setData(prev => ({
       ...prev,
       [key]: (prev[key] as any[]).filter((i: any) => i.id !== id),
     }));
   };
+
+  /* ---------------- CUSTOMERS (ÖZEL) ---------------- */
+
+  const addCustomer = (item: any) =>
+    addItem(
+      "customers",
+      {
+        type: item.type,
+        name: item.name,
+        company: item.company,
+        contact_info: item.contactInfo,
+        service: item.service,
+        start_date: item.startDate || null,
+        end_date: item.endDate || null,
+        invoice_file: item.invoiceFile || null,
+      },
+      "customers"
+    );
+
+  const deleteCustomer = (id: string) =>
+    deleteItem("customers", id, "customers");
+
+  /* ------------------------------------------------- */
 
   if (loading) return <div>Yükleniyor...</div>;
 
@@ -101,23 +131,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addPartner: (item) => addItem("partners", item, "partners"),
         deletePartner: (id) => deleteItem("partners", id, "partners"),
 
-        // CUSTOMERS (DÜZELTİLMİŞ)
-addCustomer: (item) =>
-  addItem(
-    "customers",
-    {
-      type: item.type,
-      name: item.name,
-      company: item.company,
-      contact_info: item.contactInfo,
-      service: item.service,
-      start_date: item.startDate || null,
-      end_date: item.endDate || null,
-      invoice_file: item.invoiceFile || null,
-    },
-    "customers"
-  ),
-
+        // CUSTOMERS ✅ (SİLME ARTIK ÇALIŞIR)
+        addCustomer,
+        deleteCustomer,
       }}
     >
       {children}
