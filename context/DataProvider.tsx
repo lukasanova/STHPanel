@@ -30,38 +30,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const generateId = () => crypto.randomUUID();
 
+  // Supabase bağlantısını test et
+  useEffect(() => {
+    console.log("🔍 Supabase bağlantı testi...");
+    console.log("URL:", supabase.supabaseUrl ? "✅ Var" : "❌ Yok");
+    console.log("Key:", supabase.supabaseKey ? "✅ Var" : "❌ Yok");
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       console.log("📡 Veriler çekiliyor...");
 
       try {
-        // LIBRARY VERİSİNİ ÇEK
-        const { data: libraryData, error: libraryError } = await supabase
-          .from("library")
-          .select("*");
-
-        if (libraryError) {
-          console.error("❌ Library çekme hatası:", libraryError);
-        } else {
-          console.log("✅ Library verisi alındı:", libraryData?.length, "kayıt");
-          setData(prev => ({ ...prev, library: libraryData || [] }));
-        }
-
-        // DİĞER VERİLER
+        // SADECE BASİT VERİLERİ ÇEK
+        const { data: libraryData } = await supabase.from("library").select("*");
         const { data: tasksData } = await supabase.from("tasks").select("*");
-        const { data: partnersData } = await supabase.from("partners").select("*");
         const { data: customersData } = await supabase.from("customers").select("*");
+        const { data: partnersData } = await supabase.from("partners").select("*");
 
-        setData(prev => ({
-          ...prev,
+        setData({
+          ...initialData,
+          library: libraryData || [],
           tasks: tasksData || [],
-          partners: partnersData || [],
           customers: customersData || [],
-        }));
+          partners: partnersData || [],
+        });
 
+        console.log("✅ Veriler alındı!");
       } catch (error) {
-        console.error("🔥 Genel hata:", error);
+        console.error("❌ Veri çekme hatası:", error);
       } finally {
         setLoading(false);
       }
@@ -70,185 +68,170 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchData();
   }, []);
 
-  // 📚 KÜTÜPHANE EKLEME - GÜNCEL VERSİYON
-  const addLibraryItem = async (item: Omit<LibraryItem, 'id' | 'dateAdded'> & { file?: File }) => {
-    console.log("➕ addLibraryItem çağrıldı:", item);
-
+  /* ---------------- BASİT EKLEME FONKSİYONU ---------------- */
+  const addItem = async (table: string, item: any, key: keyof AppData) => {
+    console.log(`➕ ${table} ekleniyor:`, item);
+    
     try {
-      let fileUrl = "";
-      let fileName = item.fileName || "";
-      let uploadedFileName = "";
-
-      // ✅ DOSYA VARSA STORAGE'A YÜKLE
-      if (item.file) {
-        console.log("📤 Dosya yükleniyor:", item.file.name);
-        
-        // Benzersiz dosya adı oluştur
-        const fileExt = item.file.name.split('.').pop();
-        uploadedFileName = `${generateId()}.${fileExt}`;
-        
-        // Supabase Storage'a yükle
-        const { data: uploadData, error: uploadError } = await supabase
-          .storage
-          .from('library-files')
-          .upload(uploadedFileName, item.file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error("❌ Dosya yükleme hatası:", uploadError);
-          alert("Dosya yüklenemedi: " + uploadError.message);
-          return null;
-        }
-
-        // Public URL'yi al
-        const { data: urlData } = supabase
-          .storage
-          .from('library-files')
-          .getPublicUrl(uploadedFileName);
-
-        fileUrl = urlData.publicUrl;
-        fileName = item.file.name;
-        
-        console.log("✅ Dosya yüklendi, URL:", fileUrl);
-      }
-
-      // ✅ VERİTABANINA KAYDET - DOĞRU SÜTUN İSİMLERİYLE
-      const newItem = {
-        id: generateId(),
-        title: item.title || "Başlıksız",
-        category: item.category || 'sablon',
-        description: item.description || "",
-        fileName: fileName, // ⬅️ "fileName" (camelCase, SQL'de tırnak içinde)
-        fileUrl: fileUrl || null, // ⬅️ "fileUrl" (camelCase, SQL'de tırnak içinde)
-        dateAdded: new Date().toISOString(), // ⬅️ "dateAdded" (camelCase, SQL'de tırnak içinde)
-      };
-
-      console.log("🆕 Supabase'e gönderilecek:", newItem);
-
+      const itemWithId = { ...item, id: generateId() };
+      
       const { data: inserted, error } = await supabase
-        .from("library")
-        .insert(newItem)
+        .from(table)
+        .insert(itemWithId)
         .select("*")
         .single();
 
       if (error) {
-        console.error("❌ Veritabanı hatası:", error);
-        alert("Veritabanı hatası: " + error.message);
-        return null;
+        console.error(`❌ ${table} ekleme hatası:`, error);
+        alert(`${table} eklenemedi: ${error.message}`);
+        return;
       }
 
-      console.log("✅ Veritabanına kaydedildi:", inserted);
-
+      console.log(`✅ ${table} eklendi:`, inserted);
+      
       // State'i güncelle
       setData(prev => ({
         ...prev,
-        library: [...prev.library, inserted as LibraryItem],
+        [key]: [...prev[key], inserted],
       }));
 
-      console.log("🎉 State güncellendi!");
-      return inserted as LibraryItem;
+      alert(`${table} başarıyla eklendi!`);
     } catch (error) {
-      console.error("🔥 Beklenmeyen hata:", error);
-      alert("Hata oluştu: " + error);
-      return null;
+      console.error(`🔥 ${table} ekleme hatası:`, error);
+      alert("Beklenmeyen hata!");
     }
   };
 
-  const deleteLibraryItem = async (id: string) => {
+  /* ---------------- BASİT SİLME FONKSİYONU ---------------- */
+  const deleteItem = async (table: string, id: string, key: keyof AppData) => {
+    console.log(`🗑️ ${table} siliniyor:`, id);
+    
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error(`❌ ${table} silme hatası:`, error);
+      return;
+    }
+
+    setData(prev => ({
+      ...prev,
+      [key]: prev[key].filter((item: any) => item.id !== id),
+    }));
+
+    console.log(`✅ ${table} silindi:`, id);
+  };
+
+  /* ---------------- CUSTOMERS ---------------- */
+  const addCustomer = (item: any) => {
+    const formattedItem = {
+      type: item.type,
+      name: item.name,
+      company: item.company,
+      contact_info: item.contactInfo,
+      service: item.service,
+      start_date: item.startDate || null,
+      end_date: item.endDate || null,
+      invoice_file: item.invoiceFile || null,
+    };
+    return addItem("customers", formattedItem, "customers");
+  };
+
+  /* ---------------- LIBRARY ---------------- */
+  const addLibraryItem = async (item: Omit<LibraryItem, 'id' | 'dateAdded'> & { file?: File }) => {
+    console.log("📚 Library ekleniyor:", item);
+    
     try {
-      // Önce dosya URL'sini bul
-      const itemToDelete = data.library.find(item => item.id === id);
-      
-      if (itemToDelete?.fileUrl) {
-        // Dosya adını URL'den çıkar
-        const fileName = itemToDelete.fileUrl.split('/').pop();
-        if (fileName) {
-          // Storage'dan dosyayı sil
-          const { error: storageError } = await supabase
+      let fileUrl = "";
+      let fileName = item.fileName || "";
+
+      if (item.file) {
+        console.log("📤 Dosya yükleniyor...");
+        // Basit dosya yükleme
+        const fileExt = item.file.name.split('.').pop();
+        const uniqueName = `${generateId()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase
+          .storage
+          .from('library-files')
+          .upload(uniqueName, item.file);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase
             .storage
             .from('library-files')
-            .remove([fileName]);
-            
-          if (storageError) {
-            console.error("❌ Storage silme hatası:", storageError);
-          } else {
-            console.log("✅ Storage'dan dosya silindi:", fileName);
-          }
+            .getPublicUrl(uniqueName);
+          
+          fileUrl = urlData.publicUrl;
+          fileName = item.file.name;
         }
       }
 
-      // Veritabanından sil
-      const { error } = await supabase
-        .from("library")
-        .delete()
-        .eq("id", id);
+      const libraryItem = {
+        title: item.title,
+        category: item.category,
+        description: item.description || "",
+        fileName: fileName,
+        fileUrl: fileUrl || null,
+        dateAdded: new Date().toISOString(),
+      };
 
-      if (error) {
-        console.error("❌ Veritabanı silme hatası:", error);
-        alert("Silme hatası: " + error.message);
-      } else {
-        // State'i güncelle
-        setData(prev => ({
-          ...prev,
-          library: prev.library.filter(item => item.id !== id),
-        }));
-        console.log("✅ Öğe silindi:", id);
-      }
+      return addItem("library", libraryItem, "library");
     } catch (error) {
-      console.error("🔥 Silme hatası:", error);
+      console.error("❌ Library ekleme hatası:", error);
     }
   };
 
-  if (loading) {
-    return <div className="p-8 text-center">Yükleniyor...</div>;
-  }
-
-  // Context değeri
-  const contextValue: AppContextType = {
-    ...data,
-    
-    // 📚 LIBRARY FONKSİYONLARI
-    addLibraryItem,
-    deleteLibraryItem,
-
-    // Diğer fonksiyonlar (şimdilik boş)
-    addTask: () => {},
-    updateTask: () => {},
-    deleteTask: () => {},
-    addInvestor: () => {},
-    deleteInvestor: () => {},
-    addAchievement: () => {},
-    deleteAchievement: () => {},
-    addService: () => {},
-    deleteService: () => {},
-    addPackage: () => {},
-    deletePackage: () => {},
-    updateCorporatePricing: () => {},
-    addContact: () => {},
-    deleteContact: () => {},
-    addNote: () => {},
-    deleteNote: () => {},
-    addEvent: () => {},
-    deleteEvent: () => {},
-    addMeeting: () => {},
-    deleteMeeting: () => {},
-    addCustomer: () => {},
-    deleteCustomer: () => {},
-    addExpense: () => {},
-    deleteExpense: () => {},
-    addContract: () => {},
-    deleteContract: () => {},
-    addPartner: () => {},
-    deletePartner: () => {},
-    updateSocialMetric: () => {},
-    archiveSocialStats: () => {},
-    deleteSocialHistory: () => {},
-  };
+  if (loading) return <div>Yükleniyor...</div>;
 
   return (
-    <AppContext.Provider value={contextValue}>
+    <AppContext.Provider
+      value={{
+        ...data,
+        
+        // TEMEL FONKSİYONLAR
+        addTask: (item) => addItem("tasks", item, "tasks"),
+        deleteTask: (id) => deleteItem("tasks", id, "tasks"),
+        
+        addPartner: (item) => addItem("partners", item, "partners"),
+        deletePartner: (id) => deleteItem("partners", id, "partners"),
+        
+        addCustomer,
+        deleteCustomer: (id) => deleteItem("customers", id, "customers"),
+        
+        addLibraryItem,
+        deleteLibraryItem: (id) => deleteItem("library", id, "library"),
+
+        // DİĞER FONKSİYONLAR (şimdilik boş)
+        updateTask: () => {},
+        addInvestor: () => {},
+        deleteInvestor: () => {},
+        addAchievement: () => {},
+        deleteAchievement: () => {},
+        addService: () => {},
+        deleteService: () => {},
+        addPackage: () => {},
+        deletePackage: () => {},
+        updateCorporatePricing: () => {},
+        addContact: () => {},
+        deleteContact: () => {},
+        addNote: () => {},
+        deleteNote: () => {},
+        addEvent: () => {},
+        deleteEvent: () => {},
+        addMeeting: () => {},
+        deleteMeeting: () => {},
+        addExpense: () => {},
+        deleteExpense: () => {},
+        addContract: () => {},
+        deleteContract: () => {},
+        updateSocialMetric: () => {},
+        archiveSocialStats: () => {},
+        deleteSocialHistory: () => {},
+      }}
+    >
       {children}
     </AppContext.Provider>
   );
