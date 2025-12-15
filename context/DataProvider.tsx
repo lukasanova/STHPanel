@@ -82,10 +82,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        console.error(`❌ ${table} ekleme hatası:`, error);
-        alert(`${table} eklenemedi: ${error.message}`);
-        return;
-      }
+  console.error(`❌ ${table} ekleme hatası:`, error);
+  return;
+}
 
       console.log(`✅ ${table} eklendi:`, inserted);
       
@@ -95,7 +94,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         [key]: [...prev[key], inserted],
       }));
 
-      alert(`${table} başarıyla eklendi!`);
     } catch (error) {
       console.error(`🔥 ${table} ekleme hatası:`, error);
       alert("Beklenmeyen hata!");
