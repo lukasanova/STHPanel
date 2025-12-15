@@ -1,3 +1,4 @@
+// types.ts - GÜNCELLENMİŞ HALİ
 // Görev Durumları
 export type TaskStatus = 'beklemede' | 'devam-ediyor' | 'tamamlandi';
 export type Priority = 'dusuk' | 'orta' | 'yuksek';
@@ -137,6 +138,7 @@ export interface LibraryItem {
   category: DocCategory;
   description?: string;
   fileName?: string; // Link or file name
+  fileUrl?: string; // ✅ GERÇEK DOSYA URL'Sİ EKLENDİ
   dateAdded: string;
 }
 
@@ -219,8 +221,9 @@ export interface AppContextType extends AppData {
   addPartner: (item: Omit<Partner, 'id'>) => void;
   deletePartner: (id: string) => void;
 
-  addLibraryItem: (item: Omit<LibraryItem, 'id' | 'dateAdded'>) => void;
-  deleteLibraryItem: (id: string) => void;
+  // ✅ DOSYA YÜKLEME DESTEĞİ EKLENDİ
+  addLibraryItem: (item: Omit<LibraryItem, 'id' | 'dateAdded'> & { file?: File }) => Promise<LibraryItem | null>;
+  deleteLibraryItem: (id: string) => Promise<void>;
 
   updateSocialMetric: (platform: string, data: Partial<SocialMetric>) => void;
   
