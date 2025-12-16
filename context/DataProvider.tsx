@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { AppContextType, AppData, LibraryItem, DocCategory, Investor } from "../types";
+import { AppContextType, AppData, LibraryItem, DocCategory, Investor, Expense } from "../types";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -48,7 +48,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: tasksData } = await supabase.from("tasks").select("*");
         const { data: customersData } = await supabase.from("customers").select("*");
         const { data: partnersData } = await supabase.from("partners").select("*");
-        const { data: investorsData } = await supabase.from("investors").select("*"); // YENİ EKLENDİ
+        const { data: investorsData } = await supabase.from("investors").select("*");
+        const { data: expensesData } = await supabase.from("expenses").select("*");
 
         setData({
           ...initialData,
@@ -56,7 +57,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           tasks: tasksData || [],
           customers: customersData || [],
           partners: partnersData || [],
-          investors: investorsData || [], // YENİ EKLENDİ
+          investors: investorsData || [],
+          expenses: expensesData || [],
         });
 
         console.log("✅ Veriler alındı!");
@@ -98,7 +100,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error(`🔥 ${table} ekleme hatası:`, error);
-      alert("Beklenmeyen hata!");
     }
   };
 
@@ -155,13 +156,64 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return addItem("investors", formattedItem, "investors");
     } catch (error) {
       console.error("❌ Yatırımcı ekleme hatası:", error);
-      alert("Yatırımcı eklenirken hata oluştu!");
     }
   };
 
   const deleteInvestor = async (id: string) => {
     console.log("🗑️ Yatırımcı siliniyor:", id);
     return deleteItem("investors", id, "investors");
+  };
+
+  /* ---------------- EXPENSES ---------------- */
+  const addExpense = async (item: Omit<Expense, 'id'> & { file?: File }) => {
+    console.log("💰 Gider ekleniyor:", item);
+    
+    try {
+      let fileUrl = "";
+      let fileName = "";
+
+      // Dosya yükleme
+      if (item.file) {
+        console.log("📤 Fatura dosyası yükleniyor...");
+        const fileExt = item.file.name.split('.').pop();
+        const uniqueName = `${generateId()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase
+          .storage
+          .from('invoices')
+          .upload(uniqueName, item.file);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase
+            .storage
+            .from('invoices')
+            .getPublicUrl(uniqueName);
+          
+          fileUrl = urlData.publicUrl;
+          fileName = item.file.name;
+        }
+      } else if (item.invoiceFile) {
+        fileName = item.invoiceFile;
+      }
+
+      const expenseItem = {
+        date: item.date,
+        description: item.description,
+        amount: item.amount,
+        category: item.category,
+        invoice_file: fileName,
+        invoice_url: fileUrl || null,
+      };
+
+      return addItem("expenses", expenseItem, "expenses");
+    } catch (error) {
+      console.error("❌ Gider ekleme hatası:", error);
+    }
+  };
+
+  const deleteExpense = async (id: string) => {
+    console.log("🗑️ Gider siliniyor:", id);
+    return deleteItem("expenses", id, "expenses");
   };
 
   /* ---------------- LIBRARY ---------------- */
@@ -174,7 +226,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (item.file) {
         console.log("📤 Dosya yükleniyor...");
-        // Basit dosya yükleme
         const fileExt = item.file.name.split('.').pop();
         const uniqueName = `${generateId()}.${fileExt}`;
         
@@ -233,6 +284,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addInvestor,
         deleteInvestor,
 
+        // GİDER FONKSİYONLARI
+        addExpense,
+        deleteExpense,
+
         // DİĞER FONKSİYONLAR (şimdilik boş)
         updateTask: () => {},
         addAchievement: () => {},
@@ -250,8 +305,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteEvent: () => {},
         addMeeting: () => {},
         deleteMeeting: () => {},
-        addExpense: () => {},
-        deleteExpense: () => {},
         addContract: () => {},
         deleteContract: () => {},
         updateSocialMetric: () => {},

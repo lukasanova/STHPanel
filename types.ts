@@ -110,6 +110,7 @@ export interface Expense {
   amount: number;
   category: string;
   invoiceFile?: string; // Dosya adı
+  invoiceUrl?: string; // ✅ FATURA URL'Sİ EKLENDİ
 }
 
 export interface Contract {
@@ -211,9 +212,9 @@ export interface AppContextType extends AppData {
   addCustomer: (customer: Omit<Customer, 'id'>) => void;
   deleteCustomer: (id: string) => void;
 
-  // New Actions
-  addExpense: (item: Omit<Expense, 'id'>) => void;
-  deleteExpense: (id: string) => void;
+  // New Actions - GÜNCELLENDİ
+  addExpense: (item: Omit<Expense, 'id'> & { file?: File }) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
 
   addContract: (item: Omit<Contract, 'id'>) => void;
   deleteContract: (id: string) => void;
