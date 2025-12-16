@@ -120,7 +120,8 @@ export interface Contract {
   startDate: string;
   endDate: string;
   status: 'aktif' | 'bitti' | 'yenilenecek';
-  contractFile?: string; // PDF Dosya adı
+  contractFile?: string; // Dosya adı
+  contractUrl?: string; // ✅ DOSYA URL'Sİ
 }
 
 export interface Partner {

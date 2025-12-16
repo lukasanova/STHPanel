@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { AppContextType, AppData, LibraryItem, DocCategory, Investor, Expense } from "../types";
+import { AppContextType, AppData, LibraryItem, DocCategory, Investor, Expense, Contract } from "../types";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -30,13 +30,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const generateId = () => crypto.randomUUID();
 
-  // Supabase bağlantısını test et
-  useEffect(() => {
-    console.log("🔍 Supabase bağlantı testi...");
-    console.log("URL:", supabase.supabaseUrl ? "✅ Var" : "❌ Yok");
-    console.log("Key:", supabase.supabaseKey ? "✅ Var" : "❌ Yok");
-  }, []);
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -50,6 +43,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: partnersData } = await supabase.from("partners").select("*");
         const { data: investorsData } = await supabase.from("investors").select("*");
         const { data: expensesData } = await supabase.from("expenses").select("*");
+        const { data: contractsData } = await supabase.from("contracts").select("*");
+
+        console.log("📊 Contracts verisi:", contractsData);
 
         setData({
           ...initialData,
@@ -59,6 +55,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           partners: partnersData || [],
           investors: investorsData || [],
           expenses: expensesData || [],
+          contracts: contractsData || [],
         });
 
         console.log("✅ Veriler alındı!");
@@ -79,6 +76,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const itemWithId = { ...item, id: generateId() };
       
+      console.log(`📤 ${table} insert:`, itemWithId);
+      
       const { data: inserted, error } = await supabase
         .from(table)
         .insert(itemWithId)
@@ -87,6 +86,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error(`❌ ${table} ekleme hatası:`, error);
+        console.error(`❌ Hata mesajı:`, error.message);
+        console.error(`❌ Hata detayı:`, error.details);
+        alert(`Hata: ${error.message}`);
         return;
       }
 
@@ -216,6 +218,60 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return deleteItem("expenses", id, "expenses");
   };
 
+  /* ---------------- CONTRACTS ---------------- */
+  const addContract = async (item: Omit<Contract, 'id'> & { file?: File }) => {
+    console.log("📝 Sözleşme ekleniyor:", item);
+    
+    try {
+      let fileUrl = "";
+      let fileName = "";
+
+      // Dosya yükleme
+      if (item.file) {
+        console.log("📤 Sözleşme dosyası yükleniyor...");
+        const fileExt = item.file.name.split('.').pop();
+        const uniqueName = `${generateId()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase
+          .storage
+          .from('contracts')
+          .upload(uniqueName, item.file);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase
+            .storage
+            .from('contracts')
+            .getPublicUrl(uniqueName);
+          
+          fileUrl = urlData.publicUrl;
+          fileName = item.file.name;
+        }
+      } else if (item.contractFile) {
+        fileName = item.contractFile;
+      }
+
+      const contractItem = {
+        company_name: item.companyName,
+        contract_type: item.contractType,
+        start_date: item.startDate,
+        end_date: item.endDate,
+        status: item.status,
+        contract_file: fileName,
+        contract_url: fileUrl || null,
+      };
+
+      console.log("📤 Kontrat eklenecek:", contractItem);
+      return addItem("contracts", contractItem, "contracts");
+    } catch (error) {
+      console.error("❌ Sözleşme ekleme hatası:", error);
+    }
+  };
+
+  const deleteContract = async (id: string) => {
+    console.log("🗑️ Sözleşme siliniyor:", id);
+    return deleteItem("contracts", id, "contracts");
+  };
+
   /* ---------------- LIBRARY ---------------- */
   const addLibraryItem = async (item: Omit<LibraryItem, 'id' | 'dateAdded'> & { file?: File }) => {
     console.log("📚 Library ekleniyor:", item);
@@ -288,6 +344,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addExpense,
         deleteExpense,
 
+        // SÖZLEŞME FONKSİYONLARI
+        addContract,
+        deleteContract,
+
         // DİĞER FONKSİYONLAR (şimdilik boş)
         updateTask: () => {},
         addAchievement: () => {},
@@ -305,8 +365,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteEvent: () => {},
         addMeeting: () => {},
         deleteMeeting: () => {},
-        addContract: () => {},
-        deleteContract: () => {},
         updateSocialMetric: () => {},
         archiveSocialStats: () => {},
         deleteSocialHistory: () => {},
