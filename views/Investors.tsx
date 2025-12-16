@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataProvider';
-import { Plus, Trash2, TrendingUp, DollarSign } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, Banknote, TurkishLira } from 'lucide-react';
 import { Investor } from '../types';
 
 export const InvestorsView: React.FC = () => {
@@ -15,6 +15,24 @@ export const InvestorsView: React.FC = () => {
     addInvestor(newInvestor);
     setShowModal(false);
     setNewInvestor({ name: '', contactInfo: '', status: 'potansiyel', potentialAmount: '', notes: '' });
+  };
+
+  // TL formatına çeviren fonksiyon
+  const formatCurrency = (amount: string) => {
+    if (!amount) return 'Belirtilmemiş';
+    
+    // Eğer zaten TL içeriyorsa olduğu gibi döndür
+    if (amount.toLowerCase().includes('tl') || amount.includes('₺')) {
+      return amount;
+    }
+    
+    // Sayıysa TL ekle
+    const num = amount.replace(/[^\d.,]/g, '');
+    if (num) {
+      return `${num} TL`;
+    }
+    
+    return amount;
   };
 
   return (
@@ -59,15 +77,18 @@ export const InvestorsView: React.FC = () => {
                     investor.status === 'red' ? 'bg-red-100 text-red-700' :
                     investor.status === 'gorusuldu' ? 'bg-orange-100 text-orange-700' : 
                     'bg-blue-100 text-blue-700'}`}>
-                  {investor.status}
+                  {investor.status === 'potansiyel' && 'POTANSİYEL'}
+                  {investor.status === 'gorusuldu' && 'GÖRÜŞÜLDÜ'}
+                  {investor.status === 'anlasildi' && 'ANLAŞILDI'}
+                  {investor.status === 'red' && 'RED'}
                 </span>
               </div>
               
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-500">Potansiyel Tutar:</span>
                 <span className="font-semibold text-slate-700 flex items-center">
-                  <DollarSign size={14} className="mr-1" />
-                  {investor.potentialAmount}
+                  <TurkishLira size={14} className="mr-1" />
+                  {formatCurrency(investor.potentialAmount)}
                 </span>
               </div>
 
@@ -87,25 +108,71 @@ export const InvestorsView: React.FC = () => {
         )}
       </div>
 
-      {/* Modal would be similar to Tasks but with Investor fields */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
             <h3 className="text-xl font-bold mb-4">Yatırımcı Ekle</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <input required type="text" placeholder="Yatırımcı Adı / Kurum" value={newInvestor.name} onChange={e => setNewInvestor({...newInvestor, name: e.target.value})} className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" />
-              <input required type="text" placeholder="İletişim Bilgisi" value={newInvestor.contactInfo} onChange={e => setNewInvestor({...newInvestor, contactInfo: e.target.value})} className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" />
-              <input type="text" placeholder="Potansiyel Yatırım Tutarı" value={newInvestor.potentialAmount} onChange={e => setNewInvestor({...newInvestor, potentialAmount: e.target.value})} className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" />
-              <select value={newInvestor.status} onChange={e => setNewInvestor({...newInvestor, status: e.target.value as any})} className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none">
+              <input 
+                required 
+                type="text" 
+                placeholder="Yatırımcı Adı / Kurum" 
+                value={newInvestor.name} 
+                onChange={e => setNewInvestor({...newInvestor, name: e.target.value})} 
+                className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" 
+              />
+              <input 
+                required 
+                type="text" 
+                placeholder="İletişim Bilgisi (Telefon/Email)" 
+                value={newInvestor.contactInfo} 
+                onChange={e => setNewInvestor({...newInvestor, contactInfo: e.target.value})} 
+                className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" 
+              />
+              <div className="relative">
+                <input 
+                  type="text" 
+                  placeholder="Potansiyel Yatırım Tutarı (TL)" 
+                  value={newInvestor.potentialAmount} 
+                  onChange={e => setNewInvestor({...newInvestor, potentialAmount: e.target.value})} 
+                  className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none pl-10" 
+                />
+                <TurkishLira 
+                  size={16} 
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" 
+                />
+              </div>
+              <select 
+                value={newInvestor.status} 
+                onChange={e => setNewInvestor({...newInvestor, status: e.target.value as any})} 
+                className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none"
+              >
                 <option value="potansiyel">Potansiyel</option>
                 <option value="gorusuldu">Görüşüldü</option>
                 <option value="anlasildi">Anlaşıldı</option>
                 <option value="red">Red</option>
               </select>
-              <textarea placeholder="Notlar" value={newInvestor.notes} onChange={e => setNewInvestor({...newInvestor, notes: e.target.value})} className="w-full border p-2 rounded h-24 focus:ring-2 focus:ring-primary outline-none"></textarea>
+              <textarea 
+                placeholder="Notlar" 
+                value={newInvestor.notes} 
+                onChange={e => setNewInvestor({...newInvestor, notes: e.target.value})} 
+                className="w-full border p-2 rounded h-24 focus:ring-2 focus:ring-primary outline-none"
+              ></textarea>
               <div className="flex justify-end space-x-2">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded hover:bg-slate-200">İptal</button>
-                <button type="submit" className="px-4 py-2 bg-primary text-white rounded hover:bg-slate-800">Kaydet</button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowModal(false)} 
+                  className="px-4 py-2 text-slate-600 bg-slate-100 rounded hover:bg-slate-200"
+                >
+                  İptal
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-primary text-white rounded hover:bg-slate-800"
+                >
+                  Kaydet
+                </button>
               </div>
             </form>
           </div>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { AppContextType, AppData, LibraryItem, DocCategory } from "../types";
+import { AppContextType, AppData, LibraryItem, DocCategory, Investor } from "../types";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -43,11 +43,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log("📡 Veriler çekiliyor...");
 
       try {
-        // SADECE BASİT VERİLERİ ÇEK
+        // TÜM VERİLERİ ÇEK
         const { data: libraryData } = await supabase.from("library").select("*");
         const { data: tasksData } = await supabase.from("tasks").select("*");
         const { data: customersData } = await supabase.from("customers").select("*");
         const { data: partnersData } = await supabase.from("partners").select("*");
+        const { data: investorsData } = await supabase.from("investors").select("*"); // YENİ EKLENDİ
 
         setData({
           ...initialData,
@@ -55,6 +56,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           tasks: tasksData || [],
           customers: customersData || [],
           partners: partnersData || [],
+          investors: investorsData || [], // YENİ EKLENDİ
         });
 
         console.log("✅ Veriler alındı!");
@@ -82,9 +84,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-  console.error(`❌ ${table} ekleme hatası:`, error);
-  return;
-}
+        console.error(`❌ ${table} ekleme hatası:`, error);
+        return;
+      }
 
       console.log(`✅ ${table} eklendi:`, inserted);
       
@@ -135,6 +137,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       invoice_file: item.invoiceFile || null,
     };
     return addItem("customers", formattedItem, "customers");
+  };
+
+  /* ---------------- INVESTORS ---------------- */
+  const addInvestor = async (item: Omit<Investor, 'id'>) => {
+    console.log("💰 Yatırımcı ekleniyor:", item);
+    
+    try {
+      const formattedItem = {
+        name: item.name,
+        contact_info: item.contactInfo,
+        status: item.status,
+        potential_amount: item.potentialAmount,
+        notes: item.notes,
+      };
+      
+      return addItem("investors", formattedItem, "investors");
+    } catch (error) {
+      console.error("❌ Yatırımcı ekleme hatası:", error);
+      alert("Yatırımcı eklenirken hata oluştu!");
+    }
+  };
+
+  const deleteInvestor = async (id: string) => {
+    console.log("🗑️ Yatırımcı siliniyor:", id);
+    return deleteItem("investors", id, "investors");
   };
 
   /* ---------------- LIBRARY ---------------- */
@@ -202,10 +229,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addLibraryItem,
         deleteLibraryItem: (id) => deleteItem("library", id, "library"),
 
+        // YATIRIMCI FONKSİYONLARI
+        addInvestor,
+        deleteInvestor,
+
         // DİĞER FONKSİYONLAR (şimdilik boş)
         updateTask: () => {},
-        addInvestor: () => {},
-        deleteInvestor: () => {},
         addAchievement: () => {},
         deleteAchievement: () => {},
         addService: () => {},
