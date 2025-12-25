@@ -145,15 +145,23 @@ export interface LibraryItem {
 }
 
 export interface SocialMetric {
-  platform: 'instagram' | 'linkedin' | 'website';
+  name: string;
   currentWeek: number;
   lastWeek: number;
+  unit?: string; // 'takipçi', 'görüntülenme', 'tepki', vb.
+}
+
+export interface SocialPlatform {
+  id: string;
+  platform: 'instagram' | 'linkedin' | 'website';
+  name: string;
+  metrics: SocialMetric[];
 }
 
 export interface SocialHistoryEntry {
   id: string;
-  date: string; // Kayıt tarihi
-  stats: SocialMetric[]; // O tarihteki snapshot
+  date: string;
+  stats: SocialPlatform[];
 }
 
 // App State Context Interface
