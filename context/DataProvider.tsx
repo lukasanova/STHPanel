@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { AppContextType, AppData, LibraryItem, DocCategory, Investor, Expense, Contract } from "../types";
+import { AppContextType, AppData, LibraryItem, DocCategory, Investor, Expense, Contract, TaskStatus, Priority } from "../types";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -105,6 +105,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  /* ---------------- BASİT GÜNCELLEME FONKSİYONU ---------------- */
+  const updateItem = async (table: string, id: string, updates: any, key: keyof AppData) => {
+    console.log(`✏️ ${table} güncelleniyor:`, id, updates);
+    
+    try {
+      const { data: updated, error } = await supabase
+        .from(table)
+        .update(updates)
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error(`❌ ${table} güncelleme hatası:`, error);
+        return;
+      }
+
+      // State'i güncelle
+      setData(prev => ({
+        ...prev,
+        [key]: prev[key].map((item: any) => 
+          item.id === id ? updated : item
+        ),
+      }));
+
+      console.log(`✅ ${table} güncellendi:`, updated);
+      
+    } catch (error) {
+      console.error(`🔥 ${table} güncelleme hatası:`, error);
+    }
+  };
+
   /* ---------------- BASİT SİLME FONKSİYONU ---------------- */
   const deleteItem = async (table: string, id: string, key: keyof AppData) => {
     console.log(`🗑️ ${table} siliniyor:`, id);
@@ -125,6 +157,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
 
     console.log(`✅ ${table} silindi:`, id);
+  };
+
+  /* ---------------- TASKS (GÖREVLER) FONKSİYONLARI ---------------- */
+  const addTask = (item: any) => {
+    const formattedItem = {
+      name: item.name,
+      assignee: item.assignee,
+      due_date: item.due_date,
+      status: item.status || "beklemede",
+      priority: item.priority || "orta",
+    };
+    return addItem("tasks", formattedItem, "tasks");
+  };
+
+  const updateTask = (id: string, updates: { status?: TaskStatus; priority?: Priority; name?: string; assignee?: string; due_date?: string }) => {
+    console.log("📝 Görev güncelleniyor:", id, updates);
+    return updateItem("tasks", id, updates, "tasks");
+  };
+
+  const deleteTask = (id: string) => {
+    console.log("🗑️ Görev siliniyor:", id);
+    return deleteItem("tasks", id, "tasks");
   };
 
   /* ---------------- CUSTOMERS ---------------- */
@@ -324,8 +378,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...data,
         
         // TEMEL FONKSİYONLAR
-        addTask: (item) => addItem("tasks", item, "tasks"),
-        deleteTask: (id) => deleteItem("tasks", id, "tasks"),
+        addTask,
+        updateTask,
+        deleteTask,
         
         addPartner: (item) => addItem("partners", item, "partners"),
         deletePartner: (id) => deleteItem("partners", id, "partners"),
@@ -349,7 +404,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteContract,
 
         // DİĞER FONKSİYONLAR (şimdilik boş)
-        updateTask: () => {},
         addAchievement: () => {},
         deleteAchievement: () => {},
         addService: () => {},

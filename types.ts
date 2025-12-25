@@ -233,3 +233,19 @@ export interface AppContextType extends AppData {
   archiveSocialStats: () => void;
   deleteSocialHistory: (id: string) => void;
 }
+
+// Görev durumları
+export type TaskStatus = "beklemede" | "devam-ediyor" | "tamamlandi";
+
+// Görev öncelikleri
+export type Priority = "dusuk" | "orta" | "yuksek";
+
+// Görev arayüzü
+export interface Task {
+  id: string;
+  name: string;
+  assignee: string;
+  due_date: string;
+  status: TaskStatus;
+  priority?: Priority; // İsteğe bağlı
+}
