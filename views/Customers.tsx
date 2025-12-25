@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataProvider';
-import { Plus, Trash2, Phone, Mail, Building, Calendar, User, X } from 'lucide-react';
+import { Plus, Trash2, Phone, Mail, Building, Calendar, User, X, MapPin } from 'lucide-react';
 import { Customer, CustomerType } from '../types';
 
 export const CustomersView: React.FC = () => {
@@ -13,7 +13,7 @@ export const CustomersView: React.FC = () => {
     type: 'potansiyel',
     name: '',
     company: '',
-    contactInfo: '',
+    contactInfo: '', // İletişim bilgisi buraya kaydediliyor
     service: '',
     startDate: '',
     endDate: '',
@@ -27,7 +27,18 @@ export const CustomersView: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addCustomer(newCustomer);
+    
+    // Formdaki verileri doğru şekilde gönder
+    addCustomer({
+      type: newCustomer.type,
+      name: newCustomer.name,
+      company: newCustomer.company,
+      contactInfo: newCustomer.contactInfo, // İletişim bilgisi buradan gidiyor
+      service: newCustomer.service,
+      startDate: newCustomer.startDate,
+      endDate: newCustomer.endDate,
+    });
+    
     setShowAddModal(false);
     setNewCustomer({
       type: 'potansiyel',
@@ -79,13 +90,16 @@ export const CustomersView: React.FC = () => {
         <input
           required
           type="text"
-          placeholder="Telefon, Email, Adres vb."
+          placeholder="Telefon: 0555 555 55 55, Email: ornek@email.com, Adres: İstanbul"
           value={newCustomer.contactInfo}
           onChange={(e) =>
             setNewCustomer({ ...newCustomer, contactInfo: e.target.value })
           }
           className="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-primary"
         />
+        <p className="text-xs text-slate-500 mt-1">
+          Telefon, email veya adres bilgilerini girin
+        </p>
       </div>
 
       <div>
@@ -182,7 +196,7 @@ export const CustomersView: React.FC = () => {
           </button>
         </div>
 
-        {/* ESKİ TABLO YERİNE KARTLAR */}
+        {/* MÜŞTERİ KARTLARI */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
           {filteredCustomers.length === 0 ? (
             <div className="col-span-full p-12 text-center text-slate-400">
@@ -217,9 +231,10 @@ export const CustomersView: React.FC = () => {
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <div className="flex items-center gap-2 text-sm text-slate-700">
-                    <Phone size={14} />
-                    <span>{customer.contactInfo}</span>
+                  {/* İLETİŞİM BİLGİLERİ - BURASI DÜZELDİ */}
+                  <div className="flex items-start gap-2 text-sm text-slate-700">
+                    <Phone size={14} className="mt-1 flex-shrink-0" />
+                    <span className="break-words">{customer.contactInfo}</span>
                   </div>
                   
                   <div className="text-sm text-slate-700">
@@ -251,23 +266,24 @@ export const CustomersView: React.FC = () => {
         </div>
       </div>
 
-      {/* MÜŞTERİ EKLEME MODAL'I (ESKİ) */}
+      {/* MÜŞTERİ EKLEME MODAL'I */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Yeni Müşteri Ekle</h3>
             <form onSubmit={handleSubmit}>
               {renderFormFields()}
               <div className="flex justify-end gap-2 pt-6">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-100 rounded"
+                  className="px-4 py-2 bg-slate-100 rounded hover:bg-slate-200"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded"
+                  className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
                 >
                   Kaydet
                 </button>
@@ -277,7 +293,7 @@ export const CustomersView: React.FC = () => {
         </div>
       )}
 
-      {/* MÜŞTERİ DETAY MODAL'I (YENİ) */}
+      {/* MÜŞTERİ DETAY MODAL'I */}
       {selectedCustomer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-lg">
@@ -305,9 +321,10 @@ export const CustomersView: React.FC = () => {
                 
                 <div>
                   <label className="text-sm text-slate-500">İletişim Bilgisi</label>
-                  <p className="font-medium flex items-center gap-2">
-                    <Phone size={18} /> {selectedCustomer.contactInfo}
-                  </p>
+                  <div className="font-medium flex items-start gap-2 mt-1">
+                    <Phone size={18} className="flex-shrink-0 mt-1" />
+                    <div className="break-words">{selectedCustomer.contactInfo}</div>
+                  </div>
                 </div>
 
                 <div>
@@ -395,9 +412,12 @@ export const CustomersView: React.FC = () => {
                 <button
                   onClick={() => {
                     // WhatsApp mesajı aç (isteğe bağlı)
-                    const phone = selectedCustomer.contactInfo.replace(/\D/g, '');
-                    if (phone) {
+                    const phoneMatch = selectedCustomer.contactInfo.match(/(\d[\d\s\-\(\)]{8,}\d)/);
+                    if (phoneMatch) {
+                      const phone = phoneMatch[0].replace(/\D/g, '');
                       window.open(`https://wa.me/${phone}`, '_blank');
+                    } else {
+                      alert("Telefon numarası bulunamadı. İletişim bilgilerini kontrol edin.");
                     }
                   }}
                   className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"

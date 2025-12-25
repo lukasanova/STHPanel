@@ -45,13 +45,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: expensesData } = await supabase.from("expenses").select("*");
         const { data: contractsData } = await supabase.from("contracts").select("*");
 
-        console.log("📊 Contracts verisi:", contractsData);
+        // MÜŞTERİ VERİLERİNİ DÜZELT - contact_info yerine contactInfo kullan
+        const fixedCustomers = customersData?.map(customer => ({
+          id: customer.id,
+          type: customer.type,
+          name: customer.name,
+          company: customer.company,
+          contactInfo: customer.contact_info || customer.contactInfo || "", // İkisini de kontrol et
+          service: customer.service,
+          startDate: customer.start_date,
+          endDate: customer.end_date,
+          invoiceFile: customer.invoice_file,
+        })) || [];
+
+        console.log("✅ Düzeltilmiş müşteriler:", fixedCustomers);
 
         setData({
           ...initialData,
           library: libraryData || [],
           tasks: tasksData || [],
-          customers: customersData || [],
+          customers: fixedCustomers, // Düzeltilmiş müşterileri kullan
           partners: partnersData || [],
           investors: investorsData || [],
           expenses: expensesData || [],
@@ -184,19 +197,46 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return deleteItem("tasks", id, "tasks");
   };
 
-  /* ---------------- CUSTOMERS ---------------- */
+  /* ---------------- CUSTOMERS - MÜŞTERİLER DÜZELTİLDİ ---------------- */
   const addCustomer = (item: any) => {
+    console.log("➕ Müşteri ekleniyor:", item);
+    
+    // VERİTABANINA contact_info OLARAK KAYDET
     const formattedItem = {
       type: item.type,
       name: item.name,
       company: item.company,
-      contact_info: item.contactInfo,
+      contact_info: item.contactInfo, // BURASI ÖNEMLİ: contactInfo'yu contact_info olarak kaydet
       service: item.service,
       start_date: item.startDate || null,
       end_date: item.endDate || null,
       invoice_file: item.invoiceFile || null,
     };
-    return addItem("customers", formattedItem, "customers");
+    
+    // Ekledikten sonra müşteriyi düzgün formatta state'e ekle
+    const addPromise = addItem("customers", formattedItem, "customers");
+    
+    // State'i manuel güncelle (contactInfo olarak)
+    setData(prev => {
+      const newCustomer = {
+        id: generateId(),
+        type: item.type,
+        name: item.name,
+        company: item.company,
+        contactInfo: item.contactInfo, // BURASI ÖNEMLİ: contactInfo olarak sakla
+        service: item.service,
+        startDate: item.startDate || "",
+        endDate: item.endDate || "",
+        invoiceFile: item.invoiceFile || null,
+      };
+      
+      return {
+        ...prev,
+        customers: [...prev.customers, newCustomer],
+      };
+    });
+    
+    return addPromise;
   };
 
   /* ---------------- INVESTORS ---------------- */
@@ -395,6 +435,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return deleteItem("library", id, "library");
   };
 
+  /* ---------------- MÜŞTERİ SİLME FONKSİYONU DÜZELTİLDİ ---------------- */
+  const deleteCustomer = async (id: string) => {
+    console.log("🗑️ Müşteri siliniyor:", id);
+    
+    // Veritabanından sil
+    const { error } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("❌ Müşteri silme hatası:", error);
+      return;
+    }
+
+    // State'ten sil
+    setData(prev => ({
+      ...prev,
+      customers: prev.customers.filter((customer: any) => customer.id !== id),
+    }));
+
+    console.log("✅ Müşteri silindi:", id);
+  };
+
   if (loading) return <div>Yükleniyor...</div>;
 
   return (
@@ -410,8 +474,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addPartner: (item) => addItem("partners", item, "partners"),
         deletePartner: (id) => deleteItem("partners", id, "partners"),
         
+        // MÜŞTERİ FONKSİYONLARI - DÜZELTİLDİ
         addCustomer,
-        deleteCustomer: (id) => deleteItem("customers", id, "customers"),
+        deleteCustomer,
         
         addLibraryItem,
         deleteLibraryItem,
