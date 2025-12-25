@@ -177,7 +177,7 @@ export const TasksView: React.FC = () => {
                   const overdue = isOverdue(task.due_date);
                   
                   return (
-                    <tr key={task.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr key={task.id} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         <div className="font-medium text-slate-800">{task.name}</div>
                       </td>
@@ -222,7 +222,7 @@ export const TasksView: React.FC = () => {
                       </td>
                       
                       <td className="p-4">
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleEditClick(task)}
                             className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"

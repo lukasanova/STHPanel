@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataProvider';
-import { Plus, Trash2, FileText, Download, FileCheck, Image, MessageSquare, Upload, Eye, X } from 'lucide-react';
+import { Plus, Trash2, FileText, Download, FileCheck, Image, MessageSquare, Upload, Eye, X, MoreVertical } from 'lucide-react';
 import { DocCategory, LibraryItem } from '../types';
 
 export const LibraryView: React.FC = () => {
@@ -8,6 +8,7 @@ export const LibraryView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<DocCategory>('sablon');
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState<{name: string, url?: string} | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   
   const [newItem, setNewItem] = useState<{
     title: string;
@@ -49,32 +50,38 @@ export const LibraryView: React.FC = () => {
       // Fonksiyonu çağır (DataProvider'daki yeni addLibraryItem)
       const result = await addLibraryItem(itemToAdd);
       
-      if (result) {
-        console.log("✅ Başarıyla eklendi!", result);
-        
-        // Modal'ı kapat
-        setShowModal(false);
-        
-        // Formu temizle
-        setNewItem({ 
-          title: '', 
-          category: activeTab, 
-          description: '', 
-          file: undefined,
-          fileName: '' 
-        });
-        
-        // Dosya input'unu temizle
-        const fileInput = document.getElementById('lib-upload') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
-      } else {
-        console.log("❌ Eklenemedi!");
-        alert("Dosya eklenirken bir hata oluştu!");
-      }
+      console.log("✅ Başarıyla eklendi!", result);
+      
+      // Modal'ı kapat
+      setShowModal(false);
+      
+      // Formu temizle
+      setNewItem({ 
+        title: '', 
+        category: activeTab, 
+        description: '', 
+        file: undefined,
+        fileName: '' 
+      });
+      
+      // Dosya input'unu temizle
+      const fileInput = document.getElementById('lib-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+      
+      // Başarı mesajı
+      alert("Doküman başarıyla eklendi!");
       
     } catch (error: any) {
       console.error("❌ HATA:", error);
-      alert("Bir hata oluştu: " + (error.message || error));
+      
+      // Daha kullanıcı dostu hata mesajı
+      if (error.message?.includes('storage')) {
+        alert("Dosya yüklenirken bir hata oluştu. Lütfen dosya boyutunu kontrol edin (max 50MB) veya başka bir dosya seçin.");
+      } else if (error.message?.includes('duplicate')) {
+        alert("Bu başlıkta bir doküman zaten var. Lütfen farklı bir başlık kullanın.");
+      } else {
+        alert(`Bir hata oluştu: ${error.message || "Lütfen tekrar deneyin."}`);
+      }
     }
   };
 
@@ -145,6 +152,22 @@ export const LibraryView: React.FC = () => {
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
   };
 
+  const handleDelete = async (id: string, title: string) => {
+    if (confirmDelete === id) {
+      // Silme işlemini gerçekleştir
+      await deleteLibraryItem(id);
+      setConfirmDelete(null);
+    } else {
+      // Onay için butonu değiştir
+      setConfirmDelete(id);
+      
+      // 5 saniye sonra onay durumunu sıfırla
+      setTimeout(() => {
+        setConfirmDelete(null);
+      }, 5000);
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -189,44 +212,111 @@ export const LibraryView: React.FC = () => {
             
             return (
               <div key={item.id} className="border border-slate-200 rounded-xl p-5 hover:shadow-md transition-all group relative bg-white flex flex-col">
-                <button 
-                  onClick={() => deleteLibraryItem(item.id)} 
-                  className="absolute top-4 right-4 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                >
-                  <Trash2 size={16} />
-                </button>
-
                 {/* File Preview Area */}
                 <div 
                   onClick={() => handlePreview(item.fileName, item.fileUrl)}
-                  className={`w-full h-32 rounded-lg mb-4 flex flex-col items-center justify-center border cursor-pointer transition-colors
+                  className={`w-full h-32 rounded-lg mb-4 flex flex-col items-center justify-center border cursor-pointer transition-colors relative
                     ${isPdf(item.fileName) ? 'bg-red-50 border-red-100 text-red-500 group-hover:bg-red-100' : 
                       isImageFile ? 'bg-blue-50 border-blue-100 text-blue-500 group-hover:bg-blue-100' :
                       'bg-slate-50 border-slate-100 text-slate-400 group-hover:bg-slate-100'}`}
                 >
                   {isImageFile && item.fileUrl ? (
-                    <img 
-                      src={item.fileUrl} 
-                      alt={item.title}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
+                    <>
+                      <img 
+                        src={item.fileUrl} 
+                        alt={item.title}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      {/* Silme butonu resim üzerinde */}
+                      <div className="absolute top-2 right-2">
+                        {confirmDelete === item.id ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id, item.title);
+                            }}
+                            className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 shadow-lg flex items-center gap-1 animate-pulse"
+                          >
+                            <Trash2 size={12} />
+                            Onayla
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDelete(item.id);
+                            }}
+                            className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
+                          >
+                            <Trash2 size={12} />
+                            Sil
+                          </button>
+                        )}
+                      </div>
+                    </>
                   ) : (
                     <>
                       <FileText size={48} />
                       <span className="text-xs mt-2 font-bold uppercase">
-                        {isPdf(item.fileName) ? 'PDF Belgesi' : 
-                         isImageFile ? 'Resim' : 'Doküman'}
+                        {isPdf(item.fileName) ? 'PDF BELGESİ' : 
+                         isImageFile ? 'RESİM' : 'DOKÜMAN'}
                       </span>
                       {hasRealFile && (
                         <span className="text-xs mt-1 text-green-600">✓ Gerçek Dosya</span>
                       )}
+                      {/* Silme butonu dosya ikonu üzerinde */}
+                      <div className="absolute top-2 right-2">
+                        {confirmDelete === item.id ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id, item.title);
+                            }}
+                            className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 shadow-lg flex items-center gap-1 animate-pulse"
+                          >
+                            <Trash2 size={12} />
+                            Onayla
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDelete(item.id);
+                            }}
+                            className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
+                          >
+                            <Trash2 size={12} />
+                            Sil
+                          </button>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
 
-                <div className="flex items-center mb-2">
+                <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-slate-800 line-clamp-1">{item.title}</h4>
+                  {/* Sağ üst köşede alternatif silme butonu */}
+                  <div className="lg:hidden">
+                    {confirmDelete === item.id ? (
+                      <button
+                        onClick={() => handleDelete(item.id, item.title)}
+                        className="text-red-600 hover:text-red-800 text-sm font-bold"
+                      >
+                        Onayla?
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelete(item.id)}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                        title="Sil"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
+                
                 <p className="text-sm text-slate-500 mb-4 line-clamp-2 h-10 flex-1">
                   {item.description || "Açıklama yok"}
                 </p>
@@ -235,25 +325,81 @@ export const LibraryView: React.FC = () => {
                   <span className="text-xs text-slate-400">
                     {item.dateAdded ? new Date(item.dateAdded).toLocaleDateString('tr-TR') : 'Tarih yok'}
                   </span>
-                  {(item.fileName && item.fileName !== "dosya-yok.txt") && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleDownload(item.fileName!, item.fileUrl)}
-                        className="text-xs font-bold text-slate-600 flex items-center hover:text-green-600 bg-slate-100 px-2 py-1 rounded transition-colors"
-                        title="İndir"
-                      >
-                        <Download size={12} className="mr-1"/> İndir
-                      </button>
-                      <button 
-                        onClick={() => handlePreview(item.fileName, item.fileUrl)}
-                        className="text-xs font-bold text-slate-600 flex items-center hover:text-blue-600 bg-slate-100 px-2 py-1 rounded transition-colors"
-                        title={item.fileUrl ? "Dosyayı Aç" : "Önizle"}
-                      >
-                        <Eye size={12} className="mr-1"/> {item.fileUrl ? "Aç" : "Önizle"}
-                      </button>
+                  
+                  <div className="flex items-center gap-4">
+                    {/* Alt kısımda silme butonu (mobil için) */}
+                    <div className="hidden lg:block">
+                      {confirmDelete === item.id ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDelete(item.id, item.title)}
+                            className="text-red-600 hover:text-red-800 text-xs font-bold bg-red-50 px-2 py-1 rounded"
+                          >
+                            Onayla
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(null)}
+                            className="text-slate-500 hover:text-slate-700 text-xs"
+                          >
+                            İptal
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDelete(item.id)}
+                          className="text-slate-400 hover:text-red-500 transition-colors text-xs flex items-center gap-1"
+                        >
+                          <Trash2 size={12} />
+                          Sil
+                        </button>
+                      )}
                     </div>
-                  )}
+                    
+                    {(item.fileName && item.fileName !== "dosya-yok.txt") && (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleDownload(item.fileName!, item.fileUrl)}
+                          className="text-xs font-bold text-slate-600 flex items-center hover:text-green-600 bg-slate-100 px-2 py-1 rounded transition-colors"
+                          title="İndir"
+                        >
+                          <Download size={12} className="mr-1"/> İndir
+                        </button>
+                        <button 
+                          onClick={() => handlePreview(item.fileName, item.fileUrl)}
+                          className="text-xs font-bold text-slate-600 flex items-center hover:text-blue-600 bg-slate-100 px-2 py-1 rounded transition-colors"
+                          title={item.fileUrl ? "Dosyayı Aç" : "Önizle"}
+                        >
+                          <Eye size={12} className="mr-1"/> {item.fileUrl ? "Aç" : "Önizle"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                
+                {/* Onay modalı */}
+                {confirmDelete === item.id && (
+                  <div className="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center z-10 p-4">
+                    <div className="bg-white border border-red-200 rounded-lg p-4 shadow-lg text-center">
+                      <Trash2 size={24} className="mx-auto mb-2 text-red-500" />
+                      <p className="text-sm font-bold text-slate-700 mb-1">"{item.title}" silinsin mi?</p>
+                      <p className="text-xs text-slate-500 mb-3">Bu işlem geri alınamaz.</p>
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => handleDelete(item.id, item.title)}
+                          className="bg-red-500 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-red-600"
+                        >
+                          Evet, Sil
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(null)}
+                          className="bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-slate-300"
+                        >
+                          İptal
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
