@@ -1,18 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useData } from "../context/DataProvider";
-import { Plus, Trash2, AlertCircle, Calendar, User, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, Calendar, User, CheckCircle, Clock, XCircle, Edit, Save, X } from "lucide-react";
 import { TaskStatus } from "../types";
 
 export const TasksView: React.FC = () => {
   const { tasks = [], addTask, updateTask, deleteTask } = useData();
-
+  
   const [showModal, setShowModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
   const [newTask, setNewTask] = useState({
     name: "",
     assignee: "",
     due_date: "",
     status: "beklemede" as TaskStatus,
   });
+
+  // Modal açıldığında formu sıfırla
+  useEffect(() => {
+    if (!showModal) {
+      setEditingTask(null);
+      setNewTask({
+        name: "",
+        assignee: "",
+        due_date: "",
+        status: "beklemede",
+      });
+    }
+  }, [showModal]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,15 +36,34 @@ export const TasksView: React.FC = () => {
       return;
     }
     
-    addTask(newTask);
+    if (editingTask) {
+      // Düzenleme modunda
+      updateTask(editingTask.id, newTask);
+    } else {
+      // Yeni ekleme modunda
+      addTask(newTask);
+    }
+    
     setShowModal(false);
-
+    setEditingTask(null);
     setNewTask({
       name: "",
       assignee: "",
       due_date: "",
       status: "beklemede",
     });
+  };
+
+  // Düzenleme modunu aç
+  const handleEditClick = (task: any) => {
+    setEditingTask(task);
+    setNewTask({
+      name: task.name,
+      assignee: task.assignee,
+      due_date: task.due_date,
+      status: task.status,
+    });
+    setShowModal(true);
   };
 
   // Tarihi DD-MM-YYYY formatına çevir
@@ -85,6 +118,11 @@ export const TasksView: React.FC = () => {
     return dueDate < today;
   };
 
+  // Durum güncelleme (inline)
+  const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
+    updateTask(taskId, { status: newStatus });
+  };
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-8">
@@ -93,11 +131,20 @@ export const TasksView: React.FC = () => {
           <p className="text-slate-500">Tüm görevlerinizi takip edin ve yönetin</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditingTask(null);
+            setNewTask({
+              name: "",
+              assignee: "",
+              due_date: "",
+              status: "beklemede",
+            });
+            setShowModal(true);
+          }}
           className="bg-primary hover:bg-slate-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
         >
           <Plus size={18} />
-          <span className="font-semibold">Görev Ekle</span>
+          <span className="font-semibold">Yeni Görev Ekle</span>
         </button>
       </div>
 
@@ -111,7 +158,7 @@ export const TasksView: React.FC = () => {
                 <th className="text-left p-4">Sorumlu</th>
                 <th className="text-left p-4">Son Tarih</th>
                 <th className="text-left p-4">Durum</th>
-                <th className="text-left p-4">İşlem</th>
+                <th className="text-left p-4">İşlemler</th>
               </tr>
             </thead>
 
@@ -121,7 +168,7 @@ export const TasksView: React.FC = () => {
                   <td colSpan={5} className="p-8 text-center text-slate-500">
                     <AlertCircle size={48} className="mx-auto mb-4 text-slate-300" />
                     <p className="text-lg">Henüz görev eklenmemiş</p>
-                    <p className="text-sm mt-2">Yeni görev eklemek için "Görev Ekle" butonuna tıklayın</p>
+                    <p className="text-sm mt-2">Yeni görev eklemek için "Yeni Görev Ekle" butonuna tıklayın</p>
                   </td>
                 </tr>
               ) : (
@@ -130,7 +177,7 @@ export const TasksView: React.FC = () => {
                   const overdue = isOverdue(task.due_date);
                   
                   return (
-                    <tr key={task.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={task.id} className="hover:bg-slate-50 transition-colors group">
                       <td className="p-4">
                         <div className="font-medium text-slate-800">{task.name}</div>
                       </td>
@@ -164,7 +211,7 @@ export const TasksView: React.FC = () => {
                         <div className="flex items-center">
                           <select
                             value={task.status}
-                            onChange={(e) => updateTask(task.id, { status: e.target.value as TaskStatus })}
+                            onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
                             className={`px-3 py-1.5 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer ${statusConfig.color}`}
                           >
                             <option value="beklemede">Beklemede</option>
@@ -175,17 +222,26 @@ export const TasksView: React.FC = () => {
                       </td>
                       
                       <td className="p-4">
-                        <button
-                          onClick={() => {
-                            if (window.confirm("Bu görevi silmek istediğinize emin misiniz?")) {
-                              deleteTask(task.id);
-                            }
-                          }}
-                          className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Görevi Sil"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleEditClick(task)}
+                            className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Görevi Düzenle"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Bu görevi silmek istediğinize emin misiniz?")) {
+                                deleteTask(task.id);
+                              }
+                            }}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Görevi Sil"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -196,14 +252,19 @@ export const TasksView: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal - Hem ekleme hem düzenleme için */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center p-4 z-50">
           <div className="bg-white p-6 rounded-xl w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800">Yeni Görev Ekle</h3>
+              <h3 className="text-xl font-bold text-slate-800">
+                {editingTask ? "Görevi Düzenle" : "Yeni Görev Ekle"}
+              </h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setEditingTask(null);
+                }}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <XCircle size={24} />
@@ -272,16 +333,29 @@ export const TasksView: React.FC = () => {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingTask(null);
+                  }}
                   className="flex-1 border border-slate-300 text-slate-700 px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors font-semibold"
+                  className="flex-1 bg-primary text-white px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors font-semibold flex items-center justify-center gap-2"
                 >
-                  Görevi Ekle
+                  {editingTask ? (
+                    <>
+                      <Save size={18} />
+                      Güncelle
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={18} />
+                      Görevi Ekle
+                    </>
+                  )}
                 </button>
               </div>
             </form>
