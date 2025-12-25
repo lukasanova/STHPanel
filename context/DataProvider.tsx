@@ -89,7 +89,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error(`❌ Hata mesajı:`, error.message);
         console.error(`❌ Hata detayı:`, error.details);
         alert(`Hata: ${error.message}`);
-        return;
+        throw error;
       }
 
       console.log(`✅ ${table} eklendi:`, inserted);
@@ -100,8 +100,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         [key]: [...prev[key], inserted],
       }));
 
+      return inserted;
+      
     } catch (error) {
       console.error(`🔥 ${table} ekleme hatası:`, error);
+      throw error;
     }
   };
 
@@ -334,6 +337,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let fileUrl = "";
       let fileName = item.fileName || "";
 
+      // Eğer dosya varsa, önce dosyayı storage'a yükle
       if (item.file) {
         console.log("📤 Dosya yükleniyor...");
         const fileExt = item.file.name.split('.').pop();
@@ -344,15 +348,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('library-files')
           .upload(uniqueName, item.file);
 
-        if (!uploadError) {
-          const { data: urlData } = supabase
-            .storage
-            .from('library-files')
-            .getPublicUrl(uniqueName);
-          
-          fileUrl = urlData.publicUrl;
-          fileName = item.file.name;
+        if (uploadError) {
+          console.error("❌ Dosya yükleme hatası:", uploadError);
+          throw uploadError;
         }
+
+        console.log("✅ Dosya yüklendi");
+
+        // Public URL'yi al
+        const { data: urlData } = supabase
+          .storage
+          .from('library-files')
+          .getPublicUrl(uniqueName);
+        
+        fileUrl = urlData.publicUrl;
+        fileName = item.file.name;
+        
+        console.log("🔗 Public URL:", fileUrl);
       }
 
       const libraryItem = {
@@ -364,10 +376,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         dateAdded: new Date().toISOString(),
       };
 
-      return addItem("library", libraryItem, "library");
+      console.log("📝 Library item hazır:", libraryItem);
+      
+      // addItem fonksiyonunu çağır ve sonucu bekle
+      const result = await addItem("library", libraryItem, "library");
+      console.log("✅ Library item eklendi:", result);
+      
+      return result;
+      
     } catch (error) {
       console.error("❌ Library ekleme hatası:", error);
+      throw error;
     }
+  };
+
+  const deleteLibraryItem = async (id: string) => {
+    console.log("🗑️ Library item siliniyor:", id);
+    return deleteItem("library", id, "library");
   };
 
   if (loading) return <div>Yükleniyor...</div>;
@@ -389,7 +414,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteCustomer: (id) => deleteItem("customers", id, "customers"),
         
         addLibraryItem,
-        deleteLibraryItem: (id) => deleteItem("library", id, "library"),
+        deleteLibraryItem,
 
         // YATIRIMCI FONKSİYONLARI
         addInvestor,
