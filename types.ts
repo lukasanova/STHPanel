@@ -257,3 +257,17 @@ export interface Task {
   status: TaskStatus;
   priority?: Priority; // İsteğe bağlı
 }
+
+export type CalendarView = 'month' | 'week' | 'day';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // YYYY-MM-DD formatında
+  startTime: string; // HH:mm formatında
+  endTime: string; // HH:mm formatında
+  color: string;
+  assignee: string;
+  type: 'meeting' | 'task' | 'event' | 'reminder';
+}

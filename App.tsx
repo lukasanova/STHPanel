@@ -16,6 +16,7 @@ import { ContractsView } from './views/Contracts';
 import { PartnersView } from './views/Partners';
 import { LibraryView } from './views/Library';
 import { SocialStatsView } from './views/SocialStats';
+import { CalendarViewComponent } from './views/CalendarView';
 
 const App: React.FC = () => {
   return (
@@ -39,7 +40,10 @@ const App: React.FC = () => {
             <Route path="/partners" element={<PartnersView />} />
             <Route path="/library" element={<LibraryView />} />
             <Route path="/social" element={<SocialStatsView />} />
-
+            
+            {/* Calendar Route - EKLEDİĞİNİZ YER */}
+            <Route path="/calendar" element={<CalendarViewComponent />} />
+            
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>

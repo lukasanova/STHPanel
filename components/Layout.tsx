@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, Trophy, Briefcase, 
   Phone, StickyNote, Menu, X, PieChart, Calendar, Bell, Users2, Download, ExternalLink,
-  DollarSign, FileText, Handshake, Library, BarChart2
+  DollarSign, FileText, Handshake, Library, BarChart2,
+  CalendarDays // Yeni ikon ekledim
 } from 'lucide-react';
 import { useData } from '../context/DataProvider';
 
@@ -64,9 +65,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/achievements', label: 'Başarılarımız', icon: Trophy },
     { path: '/meetings', label: 'Toplantılar', icon: Users2 },
     { path: '/services', label: 'Hizmet & Fiyatlar', icon: Briefcase },
-    { path: '/events', label: 'Etkinlik Takvimi', icon: Calendar },
+    { path: '/events', label: 'Etkinlik Takvimi', icon: CalendarDays }, // CalendarDays ikonu ile
     { path: '/contacts', label: 'İletişim & Rehber', icon: Phone },
     { path: '/notes', label: 'Notlar', icon: StickyNote },
+    { path: '/calendar', label: 'Takvim', icon: Calendar }, // Yeni ekledim
   ];
 
   const handleExport = () => {
