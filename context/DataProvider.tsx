@@ -6,6 +6,7 @@ import {
   LibraryItem, 
   Investor, 
   Expense, 
+  Income, 
   Contract, 
   TaskStatus, 
   Priority, 
@@ -61,7 +62,7 @@ const initialSocialStats: SocialPlatform[] = [
   }
 ];
 
-// BAŞLANGIÇ CALENDAR EVENTS (Geçici olarak localStorage'dan veya boş)
+// BAŞLANGIÇ CALENDAR EVENTS
 const initialCalendarEvents: CalendarEvent[] = [
   {
     id: '1',
@@ -105,7 +106,8 @@ const initialData: AppData = {
   library: [],
   socialStats: initialSocialStats,
   socialHistory: [],
-  calendarEvents: initialCalendarEvents, // CALENDAR EVENTS EKLENDİ
+  calendarEvents: initialCalendarEvents, 
+  incomes: [], 
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -127,19 +129,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: partnersData } = await supabase.from("partners").select("*");
         const { data: investorsData } = await supabase.from("investors").select("*");
         const { data: expensesData } = await supabase.from("expenses").select("*");
+        const { data: incomesData } = await supabase.from("incomes").select("*"); 
         const { data: contractsData } = await supabase.from("contracts").select("*");
         const { data: socialHistoryData } = await supabase.from("social_history").select("*");
         const { data: eventsData } = await supabase.from("events").select("*");
         const { data: meetingsData } = await supabase.from("meetings").select("*");
         
-        // CALENDAR EVENTS'ı çek - EĞER TABLO YOKSA HATA VERME
+        // CALENDAR EVENTS'ı çek
         let calendarEventsData = [];
         try {
           const { data: calendarData } = await supabase.from("calendar_events").select("*");
           calendarEventsData = calendarData || [];
         } catch (error) {
           console.log("⚠️ Calendar events tablosu henüz oluşturulmamış, localStorage kullanılacak");
-          // localStorage'dan al veya initial data kullan
           const savedCalendarEvents = localStorage.getItem('calendarEvents');
           if (savedCalendarEvents) {
             calendarEventsData = JSON.parse(savedCalendarEvents);
@@ -202,6 +204,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           type: event.type,
         })) || [];
 
+        // GELİR VERİLERİNİ DÖNÜŞTÜR
+        const formattedIncomes = incomesData?.map(income => ({
+          id: income.id,
+          date: income.date,
+          description: income.description,
+          amount: income.amount,
+          category: income.category,
+          invoiceFile: income.invoice_file,
+          invoiceUrl: income.invoice_url,
+        })) || [];
+
         // localStorage'dan sosyal istatistikleri kontrol et
         const savedSocialStats = localStorage.getItem('socialStats');
         const currentSocialStats = savedSocialStats ? JSON.parse(savedSocialStats) : initialSocialStats;
@@ -214,6 +227,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           partners: partnersData || [],
           investors: investorsData || [],
           expenses: expensesData || [],
+          incomes: formattedIncomes,
           contracts: contractsData || [],
           events: formattedEvents,
           meetings: formattedMeetings,
@@ -226,10 +240,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       } catch (error) {
         console.error("❌ Veri çekme hatası:", error);
-        // Hata durumunda localStorage'dan verileri yükle
         try {
           const savedCalendarEvents = localStorage.getItem('calendarEvents');
-          const savedData = localStorage.getItem('appData');
+          const savedIncomes = localStorage.getItem('incomes');
+          const savedExpenses = localStorage.getItem('expenses');
           
           if (savedCalendarEvents) {
             const calendarEvents = JSON.parse(savedCalendarEvents);
@@ -239,11 +253,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }));
           }
           
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
+          if (savedIncomes) {
+            const incomes = JSON.parse(savedIncomes);
             setData(prev => ({
               ...prev,
-              ...parsedData
+              incomes: incomes
+            }));
+          }
+          
+          if (savedExpenses) {
+            const expenses = JSON.parse(savedExpenses);
+            setData(prev => ({
+              ...prev,
+              expenses: expenses
             }));
           }
         } catch (localError) {
@@ -265,8 +287,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const itemWithId = { ...item, id: generateId() };
       
-      // Eğer calendar_events tablosu yoksa localStorage kullan
-      if (table === "calendar_events") {
+      // Özel tablolar için localStorage desteği
+      if (table === "calendar_events" || table === "incomes" || table === "expenses") {
         try {
           const { data: inserted, error } = await supabase
             .from(table)
@@ -286,14 +308,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }));
 
           // localStorage'a kaydet
-          const currentEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-          localStorage.setItem('calendarEvents', JSON.stringify([...currentEvents, inserted]));
+          const currentItems = JSON.parse(localStorage.getItem(table) || '[]');
+          localStorage.setItem(table, JSON.stringify([...currentItems, inserted]));
 
           console.log(`✅ ${table} eklendi:`, inserted);
           return inserted;
           
         } catch (dbError) {
-          // Database hatası durumunda localStorage kullan
           console.log(`📱 ${table} localStorage'a ekleniyor`);
           
           setData(prev => ({
@@ -301,9 +322,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             [key]: [...prev[key], itemWithId],
           }));
 
-          // localStorage'a kaydet
-          const currentEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-          localStorage.setItem('calendarEvents', JSON.stringify([...currentEvents, itemWithId]));
+          const currentItems = JSON.parse(localStorage.getItem(table) || '[]');
+          localStorage.setItem(table, JSON.stringify([...currentItems, itemWithId]));
 
           return itemWithId;
         }
@@ -317,7 +337,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) {
           console.error(`❌ ${table} ekleme hatası:`, error);
-          alert(`Hata: ${error.message}`);
           throw error;
         }
 
@@ -341,7 +360,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log(`✏️ ${table} güncelleniyor:`, id, updates);
     
     try {
-      if (table === "calendar_events") {
+      if (table === "calendar_events" || table === "incomes" || table === "expenses") {
         try {
           const { data: updated, error } = await supabase
             .from(table)
@@ -364,11 +383,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }));
 
           // localStorage'ı güncelle
-          const currentEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-          const updatedEvents = currentEvents.map((event: any) => 
-            event.id === id ? updated : event
+          const currentItems = JSON.parse(localStorage.getItem(table) || '[]');
+          const updatedItems = currentItems.map((item: any) => 
+            item.id === id ? updated : item
           );
-          localStorage.setItem('calendarEvents', JSON.stringify(updatedEvents));
+          localStorage.setItem(table, JSON.stringify(updatedItems));
 
           console.log(`✅ ${table} güncellendi:`, updated);
           return updated;
@@ -383,11 +402,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }));
 
           // localStorage'ı güncelle
-          const currentEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-          const updatedEvents = currentEvents.map((event: any) => 
-            event.id === id ? { ...event, ...updates } : event
+          const currentItems = JSON.parse(localStorage.getItem(table) || '[]');
+          const updatedItems = currentItems.map((item: any) => 
+            item.id === id ? { ...item, ...updates } : item
           );
-          localStorage.setItem('calendarEvents', JSON.stringify(updatedEvents));
+          localStorage.setItem(table, JSON.stringify(updatedItems));
 
           return { id, ...updates };
         }
@@ -425,7 +444,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteItem = async (table: string, id: string, key: keyof AppData) => {
     console.log(`🗑️ ${table} siliniyor:`, id);
     
-    if (table === "calendar_events") {
+    if (table === "calendar_events" || table === "incomes" || table === "expenses") {
       try {
         const { error } = await supabase
           .from(table)
@@ -438,9 +457,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (dbError) {
         // localStorage'dan sil
-        const currentEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-        const filteredEvents = currentEvents.filter((event: any) => event.id !== id);
-        localStorage.setItem('calendarEvents', JSON.stringify(filteredEvents));
+        const currentItems = JSON.parse(localStorage.getItem(table) || '[]');
+        const filteredItems = currentItems.filter((item: any) => item.id !== id);
+        localStorage.setItem(table, JSON.stringify(filteredItems));
       }
 
       // State'i güncelle
@@ -489,12 +508,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         type: item.type,
       };
       
-      const result = await addItem("calendar_events", formattedItem, "calendarEvents");
-      alert("✅ Etkinlik başarıyla eklendi!");
-      return result;
+      return await addItem("calendar_events", formattedItem, "calendarEvents");
     } catch (error) {
       console.error("❌ Takvim etkinliği ekleme hatası:", error);
-      alert("Etkinlik eklenirken bir hata oluştu!");
       throw error;
     }
   };
@@ -502,7 +518,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateCalendarEvent = async (id: string, updates: Partial<CalendarEvent>) => {
     console.log("✏️ Takvim etkinliği güncelleniyor:", id, updates);
     
-    // CalendarEvent'ten database formatına dönüştür
     const dbUpdates: any = {};
     if (updates.title) dbUpdates.title = updates.title;
     if (updates.description) dbUpdates.description = updates.description;
@@ -513,9 +528,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updates.assignee) dbUpdates.assignee = updates.assignee;
     if (updates.type) dbUpdates.type = updates.type;
     
-    const result = await updateItem("calendar_events", id, dbUpdates, "calendarEvents");
-    alert("✅ Etkinlik başarıyla güncellendi!");
-    return result;
+    return await updateItem("calendar_events", id, dbUpdates, "calendarEvents");
   };
 
   const deleteCalendarEvent = async (id: string) => {
@@ -523,11 +536,65 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (window.confirm('Bu etkinliği silmek istediğinize emin misiniz?')) {
       await deleteItem("calendar_events", id, "calendarEvents");
-      alert("✅ Etkinlik başarıyla silindi!");
     }
   };
 
-  /* ---------------- DİĞER FONKSİYONLAR (MEVCUT) ---------------- */
+  /* ---------------- GELİR FONKSİYONLARI ---------------- */
+  
+  const addIncome = async (item: Omit<Income, 'id'> & { file?: File }) => {
+    console.log("💰 Gelir ekleniyor:", item);
+    
+    try {
+      let fileUrl = "";
+      let fileName = "";
+
+      if (item.file) {
+        const fileExt = item.file.name.split('.').pop();
+        const uniqueName = `${generateId()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase
+          .storage
+          .from('invoices')
+          .upload(uniqueName, item.file);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase
+            .storage
+            .from('invoices')
+            .getPublicUrl(uniqueName);
+          
+          fileUrl = urlData.publicUrl;
+          fileName = item.file.name;
+        }
+      } else if (item.invoiceFile) {
+        fileName = item.invoiceFile;
+      }
+
+      const incomeItem = {
+        date: item.date,
+        description: item.description,
+        amount: item.amount,
+        category: item.category,
+        invoice_file: fileName,
+        invoice_url: fileUrl || null,
+      };
+
+      return await addItem("incomes", incomeItem, "incomes");
+    } catch (error) {
+      console.error("❌ Gelir ekleme hatası:", error);
+      throw error;
+    }
+  };
+
+  const deleteIncome = async (id: string) => {
+    console.log("🗑️ Gelir siliniyor:", id);
+    
+    if (window.confirm('Bu gelir kaydını silmek istediğinize emin misiniz?')) {
+      await deleteItem("incomes", id, "incomes");
+    }
+  };
+
+  /* ---------------- DİĞER FONKSİYONLAR ---------------- */
   
   const addTask = (item: any) => {
     const formattedItem = {
@@ -774,9 +841,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         dateAdded: new Date().toISOString(),
       };
 
-      const result = await addItem("library", libraryItem, "library");
-      return result;
-      
+      return await addItem("library", libraryItem, "library");
     } catch (error) {
       console.error("❌ Library ekleme hatası:", error);
       throw error;
@@ -848,7 +913,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error("❌ Arşivleme hatası:", error);
-        alert("Hafta kaydedilirken bir hata oluştu!");
         return;
       }
 
@@ -874,11 +938,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
 
       console.log("✅ Hafta arşivlendi!");
-      alert("✅ Haftalık veriler başarıyla kaydedildi! Yeni hafta başladı.");
       
     } catch (error) {
       console.error("❌ Arşivleme hatası:", error);
-      alert("Bir hata oluştu!");
     }
   };
 
@@ -914,10 +976,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         ...data,
         
-        // CALENDAR EVENTS FONKSİYONLARI - YENİ EKLENDİ
+        // CALENDAR EVENTS FONKSİYONLARI
         addCalendarEvent,
         updateCalendarEvent,
         deleteCalendarEvent,
+        
+        // GELİR FONKSİYONLARI
+        addIncome,
+        deleteIncome,
         
         // TEMEL FONKSİYONLAR
         addTask,

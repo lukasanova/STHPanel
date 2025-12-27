@@ -26,7 +26,7 @@ export const CalendarViewComponent: React.FC = () => {
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true); // Varsayılan Koyu Tema
   
   // Yeni etkinlik formu state'i
   const [newEvent, setNewEvent] = useState({
@@ -35,15 +35,14 @@ export const CalendarViewComponent: React.FC = () => {
     date: '',
     startTime: '09:00',
     endTime: '10:00',
-    color: '#3B82F6', // Mavi
+    color: '#3B82F6',
     assignee: '',
     type: 'meeting' as const,
   });
 
-  // Bugünün tarihini al - DOĞRU TARİH İÇİN DÜZELTME
+  // Bugünün tarihini al
   const today = new Date();
-  // Türkiye saati için düzeltme (UTC+3)
-  const todayString = new Date(today.getTime() + (3 * 60 * 60 * 1000)).toISOString().split('T')[0];
+  const todayString = today.toISOString().split('T')[0];
 
   // Ay değiştirme fonksiyonları
   const prevMonth = () => {
@@ -68,16 +67,13 @@ export const CalendarViewComponent: React.FC = () => {
     
     const days = [];
     
-    // Ayın ilk gününden önceki boş hücreler
     for (let i = 0; i < firstDay.getDay(); i++) {
       days.push(null);
     }
     
-    // Ayın günleri
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
-      // Türkiye saati için düzeltme
-      const dateString = new Date(date.getTime() + (3 * 60 * 60 * 1000)).toISOString().split('T')[0];
+      const dateString = date.toISOString().split('T')[0];
       const dayEvents = (calendarEvents || []).filter(event => event.date === dateString);
       
       days.push({
@@ -134,7 +130,7 @@ export const CalendarViewComponent: React.FC = () => {
     });
   };
 
-  // Renk seçenekleri (daha koyu tonlar)
+  // Renk seçenekleri (koyu tema için)
   const colorOptions = [
     { name: 'Koyu Mavi', value: '#1E40AF' },
     { name: 'Koyu Kırmızı', value: '#B91C1C' },
@@ -158,40 +154,19 @@ export const CalendarViewComponent: React.FC = () => {
   const monthName = currentDate.toLocaleDateString('tr-TR', { month: 'long' });
   const year = currentDate.getFullYear();
 
-  // GÜNLÜK GÖRÜNÜM İÇİN BUGÜNÜN TARİHİNİ DOĞRU AL
-  const getTodayDateString = () => {
-    const today = new Date();
-    return today.toLocaleDateString('tr-TR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  // Tema sınıfları
-  const bgClass = darkMode ? 'bg-gray-900' : 'bg-gray-50';
-  const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
-  const textSecondaryClass = darkMode ? 'text-gray-400' : 'text-gray-600';
-  const cardClass = darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
-  const buttonClass = darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
-  const buttonPrimaryClass = darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-primary hover:bg-gray-800 text-white';
-  const inputClass = darkMode ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-primary focus:border-primary';
-  const modalClass = darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800';
-
   return (
-    <div className={`p-6 min-h-screen transition-colors duration-200 ${bgClass}`}>
+    <div className={`p-6 min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h2 className={`text-2xl font-bold ${textClass}`}>Takvim</h2>
-          <p className={textSecondaryClass}>Etkinliklerinizi planlayın ve görev dağılımı yapın.</p>
+          <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Takvim</h2>
+          <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Etkinliklerinizi planlayın ve görev dağılımı yapın.</p>
         </div>
         
         <div className="flex items-center gap-3">
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className={`p-2 rounded-lg ${buttonClass} transition-colors`}
+            className={`p-2 rounded-lg ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-yellow-400' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
             title={darkMode ? 'Açık moda geç' : 'Koyu moda geç'}
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -199,7 +174,7 @@ export const CalendarViewComponent: React.FC = () => {
           
           <button
             onClick={goToToday}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${buttonClass}`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
           >
             <CalendarIcon size={16} />
             Bugün ({today.getDate()}.{today.getMonth() + 1}.{today.getFullYear()})
@@ -207,7 +182,7 @@ export const CalendarViewComponent: React.FC = () => {
           
           <button
             onClick={() => setShowEventModal(true)}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${buttonPrimaryClass}`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${darkMode ? 'bg-blue-700 hover:bg-blue-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
           >
             <Plus size={16} />
             Etkinlik Ekle
@@ -216,23 +191,23 @@ export const CalendarViewComponent: React.FC = () => {
       </div>
 
       {/* Takvim Kontrolleri */}
-      <div className={`rounded-xl border p-4 mb-6 transition-colors ${cardClass}`}>
+      <div className={`rounded-xl border p-4 mb-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4">
             <button 
               onClick={prevMonth} 
-              className={`p-2 rounded transition-colors ${buttonClass}`}
+              className={`p-2 rounded ${darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'}`}
             >
               <ChevronLeft size={20} />
             </button>
             
-            <h3 className={`text-xl font-bold ${textClass}`}>
+            <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
               {monthName} {year}
             </h3>
             
             <button 
               onClick={nextMonth} 
-              className={`p-2 rounded transition-colors ${buttonClass}`}
+              className={`p-2 rounded ${darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'}`}
             >
               <ChevronRight size={20} />
             </button>
@@ -241,19 +216,19 @@ export const CalendarViewComponent: React.FC = () => {
           <div className={`flex gap-2 p-1 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <button
               onClick={() => setView('month')}
-              className={`px-4 py-2 rounded transition-colors ${view === 'month' ? (darkMode ? 'bg-gray-600' : 'bg-white shadow') : ''} ${textClass}`}
+              className={`px-4 py-2 rounded ${view === 'month' ? (darkMode ? 'bg-gray-600' : 'bg-white') : ''} ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
             >
               <Grid size={16} />
             </button>
             <button
               onClick={() => setView('week')}
-              className={`px-4 py-2 rounded transition-colors ${view === 'week' ? (darkMode ? 'bg-gray-600' : 'bg-white shadow') : ''} ${textClass}`}
+              className={`px-4 py-2 rounded ${view === 'week' ? (darkMode ? 'bg-gray-600' : 'bg-white') : ''} ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
             >
               <List size={16} />
             </button>
             <button
               onClick={() => setView('day')}
-              className={`px-4 py-2 rounded transition-colors ${view === 'day' ? (darkMode ? 'bg-gray-600' : 'bg-white shadow') : ''} ${textClass}`}
+              className={`px-4 py-2 rounded ${view === 'day' ? (darkMode ? 'bg-gray-600' : 'bg-white') : ''} ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
             >
               <Eye size={16} />
             </button>
@@ -263,9 +238,9 @@ export const CalendarViewComponent: React.FC = () => {
 
       {/* Aylık Takvim Görünümü */}
       {view === 'month' && (
-        <div className={`rounded-xl border overflow-hidden transition-colors ${cardClass}`}>
+        <div className={`rounded-xl border overflow-hidden ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
           {/* Hafta günleri başlıkları */}
-          <div className={`grid grid-cols-7 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+          <div className={`grid grid-cols-7 border-b ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
             {['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'].map((day) => (
               <div key={day} className={`p-4 text-center font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {day}
@@ -278,11 +253,11 @@ export const CalendarViewComponent: React.FC = () => {
             {getDaysInMonth().map((day, index) => (
               <div
                 key={index}
-                className={`min-h-[120px] border-r border-b p-2 transition-colors ${
-                  day ? '' : (darkMode ? 'bg-gray-800' : 'bg-gray-50')
+                className={`min-h-[120px] border-r border-b p-2 ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${
+                  day ? '' : (darkMode ? 'bg-gray-900' : 'bg-gray-50')
                 } ${
-                  day?.dateString === todayString ? (darkMode ? 'bg-blue-900/20' : 'bg-blue-50') : ''
-                } ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                  day?.dateString === todayString ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : ''
+                }`}
                 onClick={() => {
                   if (day) {
                     setSelectedDate(day.dateString);
@@ -296,13 +271,13 @@ export const CalendarViewComponent: React.FC = () => {
                     <div className="flex justify-between items-center mb-2">
                       <span className={`font-semibold ${
                         day.dateString === todayString 
-                          ? (darkMode ? 'bg-blue-600 text-white' : 'bg-primary text-white') + ' w-6 h-6 flex items-center justify-center rounded-full'
-                          : textClass
+                          ? `${darkMode ? 'bg-blue-700' : 'bg-blue-600'} text-white w-6 h-6 flex items-center justify-center rounded-full`
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>
                         {day.day}
                       </span>
                       {day.events.length > 0 && (
-                        <span className={`text-xs ${textSecondaryClass}`}>
+                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           {day.events.length} etkinlik
                         </span>
                       )}
@@ -312,7 +287,7 @@ export const CalendarViewComponent: React.FC = () => {
                       {day.events.slice(0, 3).map((event) => (
                         <div
                           key={event.id}
-                          className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 transition-opacity ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}
+                          className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
                           style={{ 
                             backgroundColor: darkMode 
                               ? `${event.color}20` 
@@ -325,7 +300,7 @@ export const CalendarViewComponent: React.FC = () => {
                           }}
                         >
                           <div className="flex justify-between items-center">
-                            <div className="font-medium truncate flex-1">{event.title}</div>
+                            <div className={`font-medium truncate flex-1 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>{event.title}</div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -334,16 +309,16 @@ export const CalendarViewComponent: React.FC = () => {
                                   setSelectedEvent(null);
                                 }
                               }}
-                              className={`ml-1 ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-300 hover:text-red-500'}`}
+                              className={`ml-1 ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
                             >
                               <Trash2 size={12} />
                             </button>
                           </div>
-                          <div className={textSecondaryClass}>{event.startTime}</div>
+                          <div className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{event.startTime}</div>
                         </div>
                       ))}
                       {day.events.length > 3 && (
-                        <div className={`text-xs pl-1 ${textSecondaryClass}`}>
+                        <div className={`text-xs pl-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                           +{day.events.length - 3} daha...
                         </div>
                       )}
@@ -358,8 +333,8 @@ export const CalendarViewComponent: React.FC = () => {
 
       {/* Etkinlik Listesi Görünümü */}
       {view === 'week' && (
-        <div className={`rounded-xl border p-6 transition-colors ${cardClass}`}>
-          <h3 className={`text-lg font-bold mb-4 ${textClass}`}>Bu Haftaki Etkinlikler</h3>
+        <div className={`rounded-xl border p-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Bu Haftaki Etkinlikler</h3>
           <div className="space-y-4">
             {(calendarEvents || [])
               .filter(event => {
@@ -388,25 +363,25 @@ export const CalendarViewComponent: React.FC = () => {
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: event.color }}
                         />
-                        <h4 className={`font-bold ${textClass}`}>{event.title}</h4>
+                        <h4 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{event.title}</h4>
                         <span className={`px-2 py-1 text-xs rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                           {typeOptions.find(t => t.value === event.type)?.label}
                         </span>
                       </div>
                       
-                      <p className={`text-sm mb-3 ${textSecondaryClass}`}>{event.description}</p>
+                      <p className={`text-sm mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{event.description}</p>
                       
                       <div className="flex items-center gap-4 text-sm">
-                        <div className={`flex items-center gap-1 ${textSecondaryClass}`}>
+                        <div className={`flex items-center gap-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           <CalendarIcon size={14} />
                           {formatDate(event.date)}
                         </div>
-                        <div className={`flex items-center gap-1 ${textSecondaryClass}`}>
+                        <div className={`flex items-center gap-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           <Clock size={14} />
                           {event.startTime} - {event.endTime}
                         </div>
                         {event.assignee && (
-                          <div className={`flex items-center gap-1 ${textSecondaryClass}`}>
+                          <div className={`flex items-center gap-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             <User size={14} />
                             {event.assignee}
                           </div>
@@ -421,7 +396,7 @@ export const CalendarViewComponent: React.FC = () => {
                           setSelectedEvent(event);
                           setShowEventModal(true);
                         }}
-                        className={`p-2 ${darkMode ? 'text-gray-400 hover:text-blue-400' : 'text-gray-300 hover:text-blue-500'}`}
+                        className={`p-2 ${darkMode ? 'text-gray-400 hover:text-blue-400' : 'text-gray-400 hover:text-blue-500'}`}
                         title="Düzenle"
                       >
                         <Edit2 size={16} />
@@ -434,7 +409,7 @@ export const CalendarViewComponent: React.FC = () => {
                             setSelectedEvent(null);
                           }
                         }}
-                        className={`p-2 ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-300 hover:text-red-500'}`}
+                        className={`p-2 ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
                         title="Sil"
                       >
                         <Trash2 size={16} />
@@ -451,7 +426,7 @@ export const CalendarViewComponent: React.FC = () => {
               nextWeek.setDate(today.getDate() + 7);
               return eventDate >= today && eventDate <= nextWeek;
             }).length === 0 && (
-              <div className={`text-center py-12 ${textSecondaryClass}`}>
+              <div className={`text-center py-12 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                 <CalendarIcon size={48} className="mx-auto mb-4 opacity-30" />
                 <p>Bu hafta için planlanmış etkinlik bulunmuyor.</p>
               </div>
@@ -462,9 +437,14 @@ export const CalendarViewComponent: React.FC = () => {
 
       {/* Günlük Görünüm */}
       {view === 'day' && (
-        <div className={`rounded-xl border p-6 transition-colors ${cardClass}`}>
-          <h3 className={`text-lg font-bold mb-4 ${textClass}`}>
-            {getTodayDateString()}
+        <div className={`rounded-xl border p-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            {new Date().toLocaleDateString('tr-TR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
           </h3>
           
           <div className="space-y-4">
@@ -478,7 +458,7 @@ export const CalendarViewComponent: React.FC = () => {
               
               return (
                 <div key={hour} className={`flex border-b pb-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-                  <div className={`w-20 font-medium ${textSecondaryClass}`}>
+                  <div className={`w-20 font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {hour}:00
                   </div>
                   <div className="flex-1">
@@ -539,7 +519,7 @@ export const CalendarViewComponent: React.FC = () => {
                     
                     {hourEvents.length === 0 && (
                       <div
-                        className={`h-12 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${darkMode ? 'border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-400' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-500'}`}
+                        className={`h-12 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer ${darkMode ? 'border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-400' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-500'}`}
                         onClick={() => {
                           const today = new Date().toISOString().split('T')[0];
                           setSelectedDate(today);
@@ -565,8 +545,8 @@ export const CalendarViewComponent: React.FC = () => {
 
       {/* ETKİNLİK EKLEME/DÜZENLEME MODALI */}
       {showEventModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto ${modalClass}`}>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'}`}>
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold">
@@ -610,7 +590,7 @@ export const CalendarViewComponent: React.FC = () => {
                           setNewEvent({ ...newEvent, title: e.target.value });
                         }
                       }}
-                      className={`w-full border rounded-lg p-3 focus:ring-2 outline-none transition-colors ${inputClass}`}
+                      className={`w-full border rounded-lg p-3 focus:ring-2 outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500'}`}
                       placeholder="Etkinlik başlığını girin"
                     />
                   </div>
@@ -628,7 +608,7 @@ export const CalendarViewComponent: React.FC = () => {
                           setNewEvent({ ...newEvent, description: e.target.value });
                         }
                       }}
-                      className={`w-full border rounded-lg p-3 focus:ring-2 outline-none transition-colors ${inputClass}`}
+                      className={`w-full border rounded-lg p-3 focus:ring-2 outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500'}`}
                       rows={3}
                       placeholder="Etkinlik açıklamasını girin"
                     />
@@ -650,7 +630,7 @@ export const CalendarViewComponent: React.FC = () => {
                             setNewEvent({ ...newEvent, date: e.target.value });
                           }
                         }}
-                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none transition-colors ${inputClass}`}
+                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500'}`}
                       />
                     </div>
                     
@@ -667,7 +647,7 @@ export const CalendarViewComponent: React.FC = () => {
                             setNewEvent({ ...newEvent, type: e.target.value as any });
                           }
                         }}
-                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none transition-colors ${inputClass}`}
+                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500'}`}
                       >
                         {typeOptions.map(option => (
                           <option key={option.value} value={option.value}>
@@ -693,7 +673,7 @@ export const CalendarViewComponent: React.FC = () => {
                             setNewEvent({ ...newEvent, startTime: e.target.value });
                           }
                         }}
-                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none transition-colors ${inputClass}`}
+                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500'}`}
                       />
                     </div>
                     
@@ -711,7 +691,7 @@ export const CalendarViewComponent: React.FC = () => {
                             setNewEvent({ ...newEvent, endTime: e.target.value });
                           }
                         }}
-                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none transition-colors ${inputClass}`}
+                        className={`w-full border rounded-lg p-3 focus:ring-2 outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500'}`}
                       />
                     </div>
                   </div>
@@ -730,7 +710,7 @@ export const CalendarViewComponent: React.FC = () => {
                           setNewEvent({ ...newEvent, assignee: e.target.value });
                         }
                       }}
-                      className={`w-full border rounded-lg p-3 focus:ring-2 outline-none transition-colors ${inputClass}`}
+                      className={`w-full border rounded-lg p-3 focus:ring-2 outline-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500'}`}
                       placeholder="Görevli kişinin adını girin"
                     />
                   </div>
@@ -751,7 +731,7 @@ export const CalendarViewComponent: React.FC = () => {
                               setNewEvent({ ...newEvent, color: color.value });
                             }
                           }}
-                          className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                          className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform ${
                             (selectedEvent ? selectedEvent.color : newEvent.color) === color.value
                               ? darkMode ? 'border-gray-300' : 'border-gray-800'
                               : darkMode ? 'border-gray-600' : 'border-gray-300'
@@ -771,7 +751,7 @@ export const CalendarViewComponent: React.FC = () => {
                       setShowEventModal(false);
                       setSelectedEvent(null);
                     }}
-                    className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                    className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                   >
                     İptal
                   </button>
@@ -787,7 +767,7 @@ export const CalendarViewComponent: React.FC = () => {
                             setSelectedEvent(null);
                           }
                         }}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
                       >
                         Güncelle
                       </button>
@@ -800,7 +780,7 @@ export const CalendarViewComponent: React.FC = () => {
                             setSelectedEvent(null);
                           }
                         }}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
                       >
                         Sil
                       </button>
@@ -808,7 +788,7 @@ export const CalendarViewComponent: React.FC = () => {
                   ) : (
                     <button
                       type="submit"
-                      className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-primary hover:bg-gray-800'} text-white`}
+                      className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
                     >
                       Kaydet
                     </button>
@@ -822,8 +802,8 @@ export const CalendarViewComponent: React.FC = () => {
 
       {/* ETKİNLİK DETAY MODALI */}
       {selectedEvent && !showEventModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-xl w-full max-w-md ${modalClass}`}>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-xl w-full max-w-md ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'}`}>
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center gap-3">
@@ -880,7 +860,7 @@ export const CalendarViewComponent: React.FC = () => {
               <div className={`flex justify-end gap-3 mt-8 pt-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <button
                   onClick={() => setSelectedEvent(null)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                  className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                 >
                   Kapat
                 </button>
@@ -891,7 +871,7 @@ export const CalendarViewComponent: React.FC = () => {
                       setSelectedEvent(null);
                     }
                   }}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
                 >
                   Sil
                 </button>
@@ -899,7 +879,7 @@ export const CalendarViewComponent: React.FC = () => {
                   onClick={() => {
                     setShowEventModal(true);
                   }}
-                  className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-primary hover:bg-gray-800'} text-white`}
+                  className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
                 >
                   Düzenle
                 </button>

@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { useData } from '../context/DataProvider';
-import { Plus, Trash2, FileText, Upload, Eye, Download, X } from 'lucide-react';
-import { Expense } from '../types';
+import { Plus, Trash2, FileText, Upload, Eye, Download, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { Expense, Income } from '../types';
 
 export const FinanceView: React.FC = () => {
-  const { expenses, addExpense, deleteExpense } = useData();
+  const { expenses, incomes, addExpense, deleteExpense, addIncome, deleteIncome } = useData();
+  const [activeTab, setActiveTab] = useState<'expenses' | 'incomes'>('expenses');
   const [showModal, setShowModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<string>('');
@@ -20,22 +21,52 @@ export const FinanceView: React.FC = () => {
     file: undefined
   });
 
+  const [newIncome, setNewIncome] = useState<Omit<Income, 'id'> & { file?: File }>({
+    date: '', 
+    description: '', 
+    amount: 0, 
+    category: '', 
+    invoiceFile: '',
+    file: undefined
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Dosya varsa onu da ekleyerek gönder
-    const expenseData = {
-      ...newExpense,
-      file: selectedFile || undefined
-    };
-    
-    await addExpense(expenseData);
-    setShowModal(false);
-    resetForm();
+    try {
+      if (activeTab === 'expenses') {
+        const expenseData = {
+          ...newExpense,
+          file: selectedFile || undefined
+        };
+        
+        await addExpense(expenseData);
+      } else {
+        const incomeData = {
+          ...newIncome,
+          file: selectedFile || undefined
+        };
+        
+        await addIncome(incomeData);
+      }
+      
+      setShowModal(false);
+      resetForm();
+    } catch (error) {
+      console.error("İşlem sırasında hata:", error);
+    }
   };
 
   const resetForm = () => {
     setNewExpense({ 
+      date: '', 
+      description: '', 
+      amount: 0, 
+      category: '', 
+      invoiceFile: '',
+      file: undefined
+    });
+    setNewIncome({ 
       date: '', 
       description: '', 
       amount: 0, 
@@ -53,7 +84,11 @@ export const FinanceView: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setNewExpense(prev => ({ ...prev, invoiceFile: file.name }));
+      if (activeTab === 'expenses') {
+        setNewExpense(prev => ({ ...prev, invoiceFile: file.name }));
+      } else {
+        setNewIncome(prev => ({ ...prev, invoiceFile: file.name }));
+      }
     }
   };
 
@@ -62,47 +97,135 @@ export const FinanceView: React.FC = () => {
     setShowPreview(true);
   };
 
-  const totalAmount = expenses.reduce((sum, item) => sum + item.amount, 0);
+  // Hesaplamalar
+  const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+  const totalIncomes = incomes.reduce((sum, item) => sum + item.amount, 0);
+  const netBalance = totalIncomes - totalExpenses;
 
   // Aylık gider hesapla
   const monthlyExpenses = expenses.reduce((acc, expense) => {
     if (expense.date) {
-      const monthYear = expense.date.substring(0, 7); // YYYY-MM
+      const monthYear = expense.date.substring(0, 7);
       acc[monthYear] = (acc[monthYear] || 0) + expense.amount;
     }
     return acc;
   }, {} as Record<string, number>);
 
+  // Aylık gelir hesapla
+  const monthlyIncomes = incomes.reduce((acc, income) => {
+    if (income.date) {
+      const monthYear = income.date.substring(0, 7);
+      acc[monthYear] = (acc[monthYear] || 0) + income.amount;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
   // Son 6 ayın giderlerini al
-  const last6Months = Object.entries(monthlyExpenses)
+  const last6MonthsExpenses = Object.entries(monthlyExpenses)
     .sort((a, b) => b[0].localeCompare(a[0]))
     .slice(0, 6);
+
+  // Son 6 ayın gelirlerini al
+  const last6MonthsIncomes = Object.entries(monthlyIncomes)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .slice(0, 6);
+
+  // Aktif tab'a göre veriler
+  const activeData = activeTab === 'expenses' ? expenses : incomes;
+  const activeMonthlyData = activeTab === 'expenses' ? last6MonthsExpenses : last6MonthsIncomes;
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Finans & Gider Yönetimi</h2>
-          <p className="text-slate-500">Şirket harcamaları ve fatura takibi.</p>
+          <h2 className="text-2xl font-bold text-slate-800">Finans Yönetimi</h2>
+          <p className="text-slate-500">Gelir ve gider takibi.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="bg-white border border-slate-200 px-4 py-3 rounded-lg shadow-sm">
-            <span className="text-slate-500 text-sm mr-2">Toplam Gider:</span>
-            <span className="text-2xl font-bold text-red-600">{totalAmount.toLocaleString('tr-TR')} ₺</span>
+            <span className="text-slate-500 text-sm mr-2">Net Bakiye:</span>
+            <span className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {netBalance.toLocaleString('tr-TR')} ₺
+            </span>
           </div>
           <button 
             onClick={() => setShowModal(true)}
             className="bg-primary hover:bg-slate-800 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all shadow-lg"
           >
             <Plus size={18} />
-            <span>Gider Ekle</span>
+            <span>{activeTab === 'expenses' ? 'Gider Ekle' : 'Gelir Ekle'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Tab'ler */}
+      <div className="flex border-b border-slate-200 mb-6">
+        <button
+          className={`px-4 py-2 font-medium text-sm ${activeTab === 'expenses' ? 'border-b-2 border-primary text-primary' : 'text-slate-500'}`}
+          onClick={() => setActiveTab('expenses')}
+        >
+          <div className="flex items-center">
+            <TrendingDown size={16} className="mr-2" />
+            Giderler
+            <span className="ml-2 bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">
+              {expenses.length}
+            </span>
+          </div>
+        </button>
+        <button
+          className={`px-4 py-2 font-medium text-sm ${activeTab === 'incomes' ? 'border-b-2 border-primary text-primary' : 'text-slate-500'}`}
+          onClick={() => setActiveTab('incomes')}
+        >
+          <div className="flex items-center">
+            <TrendingUp size={16} className="mr-2" />
+            Gelirler
+            <span className="ml-2 bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full">
+              {incomes.length}
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* Özet Kartları */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">Toplam Gelir</p>
+              <p className="text-2xl font-bold text-green-600">{totalIncomes.toLocaleString('tr-TR')} ₺</p>
+            </div>
+            <TrendingUp size={24} className="text-green-500" />
+          </div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">Toplam Gider</p>
+              <p className="text-2xl font-bold text-red-600">{totalExpenses.toLocaleString('tr-TR')} ₺</p>
+            </div>
+            <TrendingDown size={24} className="text-red-500" />
+          </div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">Net Kar/Zarar</p>
+              <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {netBalance.toLocaleString('tr-TR')} ₺
+              </p>
+            </div>
+            {netBalance >= 0 ? (
+              <TrendingUp size={24} className="text-green-500" />
+            ) : (
+              <TrendingDown size={24} className="text-red-500" />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Aylık Özet Kartları */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        {last6Months.map(([month, amount]) => {
+        {activeMonthlyData.map(([month, amount]) => {
           const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
           const [year, monthNum] = month.split('-');
           const monthName = monthNames[parseInt(monthNum) - 1];
@@ -110,7 +233,9 @@ export const FinanceView: React.FC = () => {
           return (
             <div key={month} className="bg-white border border-slate-200 rounded-lg p-4 text-center">
               <div className="text-sm text-slate-500 mb-1">{monthName} {year}</div>
-              <div className="text-lg font-bold text-red-600">{amount.toLocaleString('tr-TR')} ₺</div>
+              <div className={`text-lg font-bold ${activeTab === 'expenses' ? 'text-red-600' : 'text-green-600'}`}>
+                {amount.toLocaleString('tr-TR')} ₺
+              </div>
             </div>
           );
         })}
@@ -123,38 +248,38 @@ export const FinanceView: React.FC = () => {
               <th className="px-6 py-4">Tarih</th>
               <th className="px-6 py-4">Kategori</th>
               <th className="px-6 py-4">Açıklama</th>
-              <th className="px-6 py-4">Fatura</th>
+              <th className="px-6 py-4">Fatura/Fiş</th>
               <th className="px-6 py-4 text-right">Tutar</th>
               <th className="px-6 py-4 text-right">İşlem</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {expenses.length === 0 ? (
+            {activeData.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                  Henüz harcama kaydı bulunmamaktadır.
+                  {activeTab === 'expenses' ? 'Henüz harcama kaydı bulunmamaktadır.' : 'Henüz gelir kaydı bulunmamaktadır.'}
                 </td>
               </tr>
-            ) : expenses.map(expense => (
-              <tr key={expense.id} className="hover:bg-slate-50">
+            ) : activeData.map(item => (
+              <tr key={item.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4 text-slate-700 font-medium">
-                  {new Date(expense.date).toLocaleDateString('tr-TR', {
+                  {new Date(item.date).toLocaleDateString('tr-TR', {
                     day: '2-digit',
                     month: '2-digit',
                     year: 'numeric'
                   })}
                 </td>
                 <td className="px-6 py-4">
-                  <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">
-                    {expense.category}
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${activeTab === 'expenses' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                    {item.category}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-slate-600 max-w-xs truncate">{expense.description}</td>
+                <td className="px-6 py-4 text-slate-600 max-w-xs truncate">{item.description}</td>
                 <td className="px-6 py-4">
-                  {(expense as any).invoice_url || expense.invoiceFile ? (
+                  {(item as any).invoice_url || item.invoiceFile ? (
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => handlePreview((expense as any).invoice_url || '')}
+                        onClick={() => handlePreview((item as any).invoice_url || '')}
                         className="flex items-center text-primary hover:text-primary-dark text-xs font-bold"
                       >
                         <Eye size={14} className="mr-1"/>
@@ -162,7 +287,7 @@ export const FinanceView: React.FC = () => {
                       </button>
                       <span className="text-slate-400">•</span>
                       <a
-                        href={(expense as any).invoice_url}
+                        href={(item as any).invoice_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center text-green-600 hover:text-green-700 text-xs font-bold"
@@ -173,14 +298,18 @@ export const FinanceView: React.FC = () => {
                     </div>
                   ) : <span className="text-slate-300">-</span>}
                 </td>
-                <td className="px-6 py-4 text-right font-mono text-red-600 font-bold">
-                  -{expense.amount.toLocaleString('tr-TR')} ₺
+                <td className={`px-6 py-4 text-right font-mono font-bold ${activeTab === 'expenses' ? 'text-red-600' : 'text-green-600'}`}>
+                  {activeTab === 'expenses' ? '-' : '+'}{item.amount.toLocaleString('tr-TR')} ₺
                 </td>
                 <td className="px-6 py-4 text-right">
                   <button 
                     onClick={() => {
-                      if (window.confirm('Bu gider kaydını silmek istediğinize emin misiniz?')) {
-                        deleteExpense(expense.id);
+                      if (window.confirm(`${activeTab === 'expenses' ? 'Bu gider' : 'Bu gelir'} kaydını silmek istediğinize emin misiniz?`)) {
+                        if (activeTab === 'expenses') {
+                          deleteExpense(item.id);
+                        } else {
+                          deleteIncome(item.id);
+                        }
                       }
                     }} 
                     className="text-slate-300 hover:text-red-500 transition-colors"
@@ -194,19 +323,27 @@ export const FinanceView: React.FC = () => {
         </table>
       </div>
 
-      {/* Gider Ekleme Modal'ı */}
+      {/* Gider/Gelir Ekleme Modal'ı */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Yeni Gider Ekle</h3>
+            <h3 className="text-xl font-bold mb-4">
+              {activeTab === 'expenses' ? 'Yeni Gider Ekle' : 'Yeni Gelir Ekle'}
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Tarih *</label>
                 <input 
                   required 
                   type="date" 
-                  value={newExpense.date} 
-                  onChange={e => setNewExpense({...newExpense, date: e.target.value})} 
+                  value={activeTab === 'expenses' ? newExpense.date : newIncome.date} 
+                  onChange={e => {
+                    if (activeTab === 'expenses') {
+                      setNewExpense({...newExpense, date: e.target.value});
+                    } else {
+                      setNewIncome({...newIncome, date: e.target.value});
+                    }
+                  }} 
                   className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" 
                 />
               </div>
@@ -214,19 +351,39 @@ export const FinanceView: React.FC = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kategori *</label>
                 <select 
                   required
-                  value={newExpense.category} 
-                  onChange={e => setNewExpense({...newExpense, category: e.target.value})} 
+                  value={activeTab === 'expenses' ? newExpense.category : newIncome.category} 
+                  onChange={e => {
+                    if (activeTab === 'expenses') {
+                      setNewExpense({...newExpense, category: e.target.value});
+                    } else {
+                      setNewIncome({...newIncome, category: e.target.value});
+                    }
+                  }} 
                   className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none"
                 >
                   <option value="">Seçiniz...</option>
-                  <option value="Ofis">Ofis Giderleri</option>
-                  <option value="Yazılım">Yazılım/Lisans</option>
-                  <option value="Pazarlama">Pazarlama/Reklam</option>
-                  <option value="Seyahat">Seyahat/Konaklama</option>
-                  <option value="Personel">Personel/Maaş</option>
-                  <option value="Vergi">Vergi/Giderler</option>
-                  <option value="Kira">Kira/Aidat</option>
-                  <option value="Diğer">Diğer</option>
+                  {activeTab === 'expenses' ? (
+                    <>
+                      <option value="Ofis">Ofis Giderleri</option>
+                      <option value="Yazılım">Yazılım/Lisans</option>
+                      <option value="Pazarlama">Pazarlama/Reklam</option>
+                      <option value="Seyahat">Seyahat/Konaklama</option>
+                      <option value="Personel">Personel/Maaş</option>
+                      <option value="Vergi">Vergi/Giderler</option>
+                      <option value="Kira">Kira/Aidat</option>
+                      <option value="Diğer">Diğer</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Proje">Proje Geliri</option>
+                      <option value="Danışmanlık">Danışmanlık</option>
+                      <option value="Ürün Satış">Ürün Satış</option>
+                      <option value="Hizmet">Hizmet Geliri</option>
+                      <option value="Yatırım">Yatırım</option>
+                      <option value="Destek">Destek/Fon</option>
+                      <option value="Diğer">Diğer</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div>
@@ -236,8 +393,15 @@ export const FinanceView: React.FC = () => {
                   type="number" 
                   step="0.01"
                   min="0"
-                  value={newExpense.amount} 
-                  onChange={e => setNewExpense({...newExpense, amount: parseFloat(e.target.value) || 0})} 
+                  value={activeTab === 'expenses' ? newExpense.amount : newIncome.amount} 
+                  onChange={e => {
+                    const value = parseFloat(e.target.value) || 0;
+                    if (activeTab === 'expenses') {
+                      setNewExpense({...newExpense, amount: value});
+                    } else {
+                      setNewIncome({...newIncome, amount: value});
+                    }
+                  }} 
                   className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" 
                   placeholder="0.00"
                 />
@@ -247,10 +411,16 @@ export const FinanceView: React.FC = () => {
                 <input 
                   required 
                   type="text" 
-                  value={newExpense.description} 
-                  onChange={e => setNewExpense({...newExpense, description: e.target.value})} 
+                  value={activeTab === 'expenses' ? newExpense.description : newIncome.description} 
+                  onChange={e => {
+                    if (activeTab === 'expenses') {
+                      setNewExpense({...newExpense, description: e.target.value});
+                    } else {
+                      setNewIncome({...newIncome, description: e.target.value});
+                    }
+                  }} 
                   className="w-full border p-2 rounded focus:ring-2 focus:ring-primary outline-none" 
-                  placeholder="Harcama açıklaması..."
+                  placeholder={activeTab === 'expenses' ? "Harcama açıklaması..." : "Gelir açıklaması..."}
                 />
               </div>
               <div>
@@ -284,7 +454,11 @@ export const FinanceView: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setSelectedFile(null);
-                        setNewExpense(prev => ({ ...prev, invoiceFile: '' }));
+                        if (activeTab === 'expenses') {
+                          setNewExpense(prev => ({ ...prev, invoiceFile: '' }));
+                        } else {
+                          setNewIncome(prev => ({ ...prev, invoiceFile: '' }));
+                        }
                         if (fileInputRef.current) fileInputRef.current.value = '';
                       }}
                       className="text-red-500 hover:text-red-700"

@@ -271,3 +271,19 @@ export interface CalendarEvent {
   assignee: string;
   type: 'meeting' | 'task' | 'event' | 'reminder';
 }
+
+export interface Income {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  category: string;
+  invoiceFile?: string;
+  invoiceUrl?: string;
+}
+
+export interface AppData {
+  // ... diğer özellikler
+  incomes: Income[];
+  // ... diğer özellikler
+}
