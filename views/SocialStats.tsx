@@ -7,9 +7,11 @@ export const SocialStatsView: React.FC = () => {
   const { socialStats, updateSocialMetric, archiveSocialStats, socialHistory, deleteSocialHistory } = useData();
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
 
-  // Büyüme yüzdesini hesapla
-  const calculateGrowth = (current: number, last: number) => {
-    if (last === 0) return 0;
+  // Büyüme yüzdesini hesapla - GÜVENLİ VERSİYON
+  const calculateGrowth = (current: number, last: number): number => {
+    if (last === 0) {
+      return current > 0 ? 100 : 0;
+    }
     return ((current - last) / last) * 100;
   };
 
@@ -49,14 +51,24 @@ export const SocialStatsView: React.FC = () => {
     }
   };
 
-  // Sayıyı formatla
-  const formatNumber = (num: number) => {
+  // Sayıyı formatla - GÜVENLİ VERSİYON
+  const formatNumber = (num: number): string => {
+    if (typeof num !== 'number' || isNaN(num)) {
+      return '0';
+    }
+    
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`;
     } else if (num >= 1000) {
       return `${(num / 1000).toFixed(1)}K`;
     }
-    return num.toString();
+    return num.toFixed(0);
+  };
+
+  // Değeri güvenli şekilde al
+  const safeValue = (value: any): number => {
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
   };
 
   return (
@@ -112,7 +124,9 @@ export const SocialStatsView: React.FC = () => {
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {platform.metrics.map((metric: SocialMetric) => {
-                      const growth = calculateGrowth(metric.currentWeek, metric.lastWeek);
+                      const currentWeek = safeValue(metric.currentWeek);
+                      const lastWeek = safeValue(metric.lastWeek);
+                      const growth = calculateGrowth(currentWeek, lastWeek);
                       const isPositive = growth > 0;
                       const isNegative = growth < 0;
                       
@@ -137,13 +151,17 @@ export const SocialStatsView: React.FC = () => {
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="text-xs font-medium text-slate-600">Bu Hafta</label>
-                                <span className="text-sm font-bold text-slate-800">{formatNumber(metric.currentWeek)} {metric.unit}</span>
+                                <span className="text-sm font-bold text-slate-800">{formatNumber(currentWeek)} {metric.unit}</span>
                               </div>
                               <input 
                                 type="number" 
                                 min="0"
-                                value={metric.currentWeek || ''}
-                                onChange={(e) => updateSocialMetric(platform.id, metric.name, { currentWeek: Number(e.target.value) || 0 })}
+                                step="1"
+                                value={currentWeek}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0;
+                                  updateSocialMetric(platform.id, metric.name, { currentWeek: value });
+                                }}
                                 className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-slate-900 focus:ring-2 focus:ring-primary outline-none transition-all"
                                 placeholder="Bu haftaki değeri girin"
                               />
@@ -153,13 +171,17 @@ export const SocialStatsView: React.FC = () => {
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="text-xs font-medium text-slate-600">Geçen Hafta</label>
-                                <span className="text-sm font-bold text-slate-800">{formatNumber(metric.lastWeek)} {metric.unit}</span>
+                                <span className="text-sm font-bold text-slate-800">{formatNumber(lastWeek)} {metric.unit}</span>
                               </div>
                               <input 
                                 type="number" 
                                 min="0"
-                                value={metric.lastWeek || ''}
-                                onChange={(e) => updateSocialMetric(platform.id, metric.name, { lastWeek: Number(e.target.value) || 0 })}
+                                step="1"
+                                value={lastWeek}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0;
+                                  updateSocialMetric(platform.id, metric.name, { lastWeek: value });
+                                }}
                                 className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-slate-900 focus:ring-2 focus:ring-primary outline-none transition-all"
                                 placeholder="Geçen haftaki değeri girin"
                               />
@@ -171,9 +193,9 @@ export const SocialStatsView: React.FC = () => {
                             <div className="text-xs text-slate-600">
                               <span className="font-medium">Büyüme: </span>
                               {growth > 0 ? (
-                                <span className="text-green-600">+{formatNumber(metric.currentWeek - metric.lastWeek)} {metric.unit} (%{growth.toFixed(1)})</span>
+                                <span className="text-green-600">+{formatNumber(currentWeek - lastWeek)} {metric.unit} (%{growth.toFixed(1)})</span>
                               ) : growth < 0 ? (
-                                <span className="text-red-600">-{formatNumber(Math.abs(metric.currentWeek - metric.lastWeek))} {metric.unit} (%{Math.abs(growth).toFixed(1)})</span>
+                                <span className="text-red-600">-{formatNumber(Math.abs(currentWeek - lastWeek))} {metric.unit} (%{Math.abs(growth).toFixed(1)})</span>
                               ) : (
                                 <span className="text-slate-500">Değişim yok</span>
                               )}
@@ -196,19 +218,31 @@ export const SocialStatsView: React.FC = () => {
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">
-                          {platform.metrics.filter(m => calculateGrowth(m.currentWeek, m.lastWeek) > 0).length}
+                          {platform.metrics.filter(m => {
+                            const curr = safeValue(m.currentWeek);
+                            const last = safeValue(m.lastWeek);
+                            return calculateGrowth(curr, last) > 0;
+                          }).length}
                         </div>
                         <div className="text-xs text-slate-600">Pozitif Büyüme</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-red-600">
-                          {platform.metrics.filter(m => calculateGrowth(m.currentWeek, m.lastWeek) < 0).length}
+                          {platform.metrics.filter(m => {
+                            const curr = safeValue(m.currentWeek);
+                            const last = safeValue(m.lastWeek);
+                            return calculateGrowth(curr, last) < 0;
+                          }).length}
                         </div>
                         <div className="text-xs text-slate-600">Negatif Büyüme</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">
-                          {platform.metrics.filter(m => calculateGrowth(m.currentWeek, m.lastWeek) === 0).length}
+                          {platform.metrics.filter(m => {
+                            const curr = safeValue(m.currentWeek);
+                            const last = safeValue(m.lastWeek);
+                            return calculateGrowth(curr, last) === 0;
+                          }).length}
                         </div>
                         <div className="text-xs text-slate-600">Değişmeyen</div>
                       </div>
@@ -222,16 +256,16 @@ export const SocialStatsView: React.FC = () => {
       </div>
 
       {/* GEÇMİŞ HAFTALAR */}
-      {socialHistory.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-xl font-bold text-slate-700 mb-6 flex items-center">
-            <Calendar className="mr-3" size={24} /> 
-            <span>Geçmiş Haftaların Kayıtları</span>
-            <span className="ml-2 px-2 py-1 bg-slate-100 text-slate-600 text-sm rounded-full">
-              {socialHistory.length} hafta
-            </span>
-          </h3>
-          
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 className="text-xl font-bold text-slate-700 mb-6 flex items-center">
+          <Calendar className="mr-3" size={24} /> 
+          <span>Geçmiş Haftaların Kayıtları</span>
+          <span className="ml-2 px-2 py-1 bg-slate-100 text-slate-600 text-sm rounded-full">
+            {socialHistory.length} hafta
+          </span>
+        </h3>
+        
+        {socialHistory.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs">
@@ -268,21 +302,21 @@ export const SocialStatsView: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <Instagram size={16} className="text-pink-600 mr-2" />
-                          <span className="font-mono">{instagramMetric.currentWeek.toLocaleString()}</span>
+                          <span className="font-mono">{safeValue(instagramMetric.currentWeek).toLocaleString()}</span>
                           <span className="text-xs text-slate-500 ml-1">{instagramMetric.unit}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <Linkedin size={16} className="text-blue-700 mr-2" />
-                          <span className="font-mono">{linkedinMetric.currentWeek.toLocaleString()}</span>
+                          <span className="font-mono">{safeValue(linkedinMetric.currentWeek).toLocaleString()}</span>
                           <span className="text-xs text-slate-500 ml-1">{linkedinMetric.unit}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <Globe size={16} className="text-slate-600 mr-2" />
-                          <span className="font-mono">{websiteMetric.currentWeek.toLocaleString()}</span>
+                          <span className="font-mono">{safeValue(websiteMetric.currentWeek).toLocaleString()}</span>
                           <span className="text-xs text-slate-500 ml-1">{websiteMetric.unit}</span>
                         </div>
                       </td>
@@ -305,16 +339,14 @@ export const SocialStatsView: React.FC = () => {
               </tbody>
             </table>
           </div>
-          
-          {socialHistory.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
-              <Calendar size={48} className="mx-auto mb-4 opacity-30" />
-              <p>Henüz haftalık kayıt bulunmuyor.</p>
-              <p className="text-sm mt-2">"Haftayı Tamamla ve Kaydet" butonuna tıklayarak ilk kaydınızı oluşturabilirsiniz.</p>
-            </div>
-          )}
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-12 text-slate-400">
+            <Calendar size={48} className="mx-auto mb-4 opacity-30" />
+            <p>Henüz haftalık kayıt bulunmuyor.</p>
+            <p className="text-sm mt-2">"Haftayı Tamamla ve Kaydet" butonuna tıklayarak ilk kaydınızı oluşturabilirsiniz.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

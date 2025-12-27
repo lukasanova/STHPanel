@@ -79,7 +79,7 @@ const initialCalendarEvents: CalendarEvent[] = [
     id: '2',
     title: 'Proje Teslimi',
     description: 'XYZ projesinin teslimi',
-    date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Yarın
+    date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     startTime: '14:00',
     endTime: '15:30',
     color: '#10B981',
@@ -161,12 +161,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           invoiceFile: customer.invoice_file,
         })) || [];
 
-        // SOSYAL GEÇMİŞ VERİLERİNİ DÖNÜŞTÜR
-        const loadedSocialHistory = socialHistoryData?.map(entry => ({
-          id: entry.id,
-          date: entry.date,
-          stats: entry.stats || []
-        })) || [];
+        // SOSYAL GEÇMİŞ VERİLERİNİ DÖNÜŞTÜR - DÜZELTİLDİ!
+        const loadedSocialHistory = socialHistoryData?.map(entry => {
+          try {
+            let stats = [];
+            if (entry.stats) {
+              // Eğer stats string ise parse et, değilse direkt kullan
+              if (typeof entry.stats === 'string') {
+                stats = JSON.parse(entry.stats);
+              } else {
+                stats = entry.stats;
+              }
+            }
+            
+            return {
+              id: entry.id,
+              date: entry.date,
+              stats: stats || []
+            };
+          } catch (parseError) {
+            console.error('JSON parse hatası:', parseError);
+            return {
+              id: entry.id,
+              date: entry.date,
+              stats: []
+            };
+          }
+        }) || [];
 
         // TAKVİM VERİLERİNİ DÖNÜŞTÜR
         const formattedEvents = eventsData?.map(event => ({
