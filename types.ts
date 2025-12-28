@@ -1,16 +1,17 @@
-// types.ts - GÜNCELLENMİŞ HALİ
+// types.ts - TAMAMEN GÜNCELLENMİŞ HALİ
+
 // Görev Durumları
 export type TaskStatus = 'beklemede' | 'devam-ediyor' | 'tamamlandi';
 export type Priority = 'dusuk' | 'orta' | 'yuksek';
 
+// Görev arayüzü
 export interface Task {
   id: string;
-  title: string;
-  assignee: string; // Görevli kişi
-  dueDate: string;
+  name: string;
+  assignee: string;
+  due_date: string;
   status: TaskStatus;
-  priority: Priority;
-  description?: string;
+  priority?: Priority;
 }
 
 export interface Investor {
@@ -26,31 +27,31 @@ export interface Achievement {
   id: string;
   date: string;
   title: string;
-  impact: string; // Yarattığı etki
+  impact: string;
 }
 
 export interface ServiceItem {
   id: string;
   name: string;
-  category: string; 
   price: number;
+  category: string;
 }
 
 export interface ServicePackage {
   id: string;
   name: string;
+  price: number;
   target: 'otel' | 'hastane' | 'diger';
   description: string;
-  price: number;
   features: string[];
 }
 
 export interface CorporatePricing {
   id: string;
-  size: 'kucuk' | 'orta' | 'buyuk' | 'kurumsal';
-  basePrice: number;
-  adjustment: number; // Percentage (+20 for increase, -10 for discount)
+  size: string;
   description: string;
+  basePrice: number;
+  adjustment: number;
 }
 
 export interface Contact {
@@ -58,7 +59,7 @@ export interface Contact {
   name: string;
   role: string;
   company: string;
-  phone: string; // WhatsApp için
+  phone: string;
   email: string;
 }
 
@@ -68,23 +69,25 @@ export interface Note {
   createdAt: string;
 }
 
-export interface EventItem {
+export interface Event {
   id: string;
   title: string;
   date: string;
-  endDate?: string;
-  location: string;
-  description?: string;
-  url?: string;
+  time: string;
+  type: string;
+  description: string;
+  participants: string[];
 }
 
 export interface Meeting {
   id: string;
   title: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:MM
-  attendees: string;
-  description?: string;
+  date: string;
+  time: string;
+  participants: string[];
+  agenda: string;
+  notes: string;
+  status: string;
 }
 
 export type CustomerType = 'potansiyel' | 'mevcut' | 'onceki';
@@ -92,16 +95,14 @@ export type CustomerType = 'potansiyel' | 'mevcut' | 'onceki';
 export interface Customer {
   id: string;
   type: CustomerType;
-  name: string; // Kişi Adı
-  company: string; // Kurum Adı
+  name: string;
+  company: string;
   contactInfo: string;
-  service: string; // Potansiyel veya Verilen Hizmet
+  service: string;
   startDate?: string;
-  endDate?: string; // Bitiş veya Sonlandırma Tarihi
-  invoiceFile?: string; // Dosya adı simülasyonu
+  endDate?: string;
+  invoiceFile?: string;
 }
-
-// --- NEW TYPES ---
 
 export interface Expense {
   id: string;
@@ -109,8 +110,18 @@ export interface Expense {
   description: string;
   amount: number;
   category: string;
-  invoiceFile?: string; // Dosya adı
-  invoiceUrl?: string; // ✅ FATURA URL'Sİ EKLENDİ
+  invoiceFile?: string;
+  invoiceUrl?: string;
+}
+
+export interface Income {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  category: string;
+  invoiceFile?: string;
+  invoiceUrl?: string;
 }
 
 export interface Contract {
@@ -120,8 +131,8 @@ export interface Contract {
   startDate: string;
   endDate: string;
   status: 'aktif' | 'bitti' | 'yenilenecek';
-  contractFile?: string; // Dosya adı
-  contractUrl?: string; // ✅ DOSYA URL'Sİ
+  contractFile?: string;
+  contractUrl?: string;
 }
 
 export interface Partner {
@@ -139,8 +150,8 @@ export interface LibraryItem {
   title: string;
   category: DocCategory;
   description?: string;
-  fileName?: string; // Link or file name
-  fileUrl?: string; // ✅ GERÇEK DOSYA URL'Sİ EKLENDİ
+  fileName?: string;
+  fileUrl?: string;
   dateAdded: string;
 }
 
@@ -148,7 +159,7 @@ export interface SocialMetric {
   name: string;
   currentWeek: number;
   lastWeek: number;
-  unit?: string; // 'takipçi', 'görüntülenme', 'tepki', vb.
+  unit?: string;
 }
 
 export interface SocialPlatform {
@@ -164,6 +175,18 @@ export interface SocialHistoryEntry {
   stats: SocialPlatform[];
 }
 
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  color: string;
+  assignee: string;
+  type: 'meeting' | 'task' | 'event' | 'reminder';
+}
+
 // App State Context Interface
 export interface AppData {
   tasks: Task[];
@@ -174,35 +197,35 @@ export interface AppData {
   corporatePricing: CorporatePricing[];
   contacts: Contact[];
   notes: Note[];
-  events: EventItem[];
+  events: Event[];
   meetings: Meeting[];
   customers: Customer[];
-  
-  // New Data Arrays
   expenses: Expense[];
+  incomes: Income[];
   contracts: Contract[];
   partners: Partner[];
   library: LibraryItem[];
-  socialStats: SocialMetric[];
+  socialStats: SocialPlatform[];
   socialHistory: SocialHistoryEntry[];
+  calendarEvents: CalendarEvent[];
 }
 
 export interface AppContextType extends AppData {
-  addTask: (task: Omit<Task, 'id'>) => void;
-  updateTask: (id: string, task: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
+  addTask: (task: Omit<Task, 'id'>) => Promise<any>;
+  updateTask: (id: string, updates: Partial<Task>) => Promise<any>;
+  deleteTask: (id: string) => Promise<void>;
   
-  addInvestor: (investor: Omit<Investor, 'id'>) => void;
-  deleteInvestor: (id: string) => void;
+  addInvestor: (investor: Omit<Investor, 'id'>) => Promise<any>;
+  deleteInvestor: (id: string) => Promise<void>;
 
   addAchievement: (achievement: Omit<Achievement, 'id'>) => void;
   deleteAchievement: (id: string) => void;
 
-  addService: (service: Omit<ServiceItem, 'id'>) => void;
-  deleteService: (id: string) => void;
+  addService: (service: Omit<ServiceItem, 'id'>) => Promise<any>;
+  deleteService: (id: string) => Promise<void>;
 
-  addPackage: (pkg: Omit<ServicePackage, 'id'>) => void;
-  deletePackage: (id: string) => void;
+  addPackage: (pkg: Omit<ServicePackage, 'id'>) => Promise<any>;
+  deletePackage: (id: string) => Promise<void>;
 
   updateCorporatePricing: (id: string, data: Partial<CorporatePricing>) => void;
 
@@ -212,78 +235,35 @@ export interface AppContextType extends AppData {
   addNote: (note: Omit<Note, 'id' | 'createdAt'>) => void;
   deleteNote: (id: string) => void;
 
-  addEvent: (event: Omit<EventItem, 'id'>) => void;
-  deleteEvent: (id: string) => void;
+  addEvent: (event: Omit<Event, 'id'>) => Promise<any>;
+  deleteEvent: (id: string) => Promise<void>;
 
-  addMeeting: (meeting: Omit<Meeting, 'id'>) => void;
-  deleteMeeting: (id: string) => void;
+  addMeeting: (meeting: Omit<Meeting, 'id'>) => Promise<any>;
+  deleteMeeting: (id: string) => Promise<void>;
 
-  addCustomer: (customer: Omit<Customer, 'id'>) => void;
-  deleteCustomer: (id: string) => void;
+  addCustomer: (customer: Omit<Customer, 'id'>) => Promise<any>;
+  deleteCustomer: (id: string) => Promise<void>;
 
-  // New Actions - GÜNCELLENDİ
-  addExpense: (item: Omit<Expense, 'id'> & { file?: File }) => Promise<void>;
+  addExpense: (item: Omit<Expense, 'id'> & { file?: File }) => Promise<any>;
   deleteExpense: (id: string) => Promise<void>;
 
-  addContract: (item: Omit<Contract, 'id'>) => void;
-  deleteContract: (id: string) => void;
+  addIncome: (item: Omit<Income, 'id'> & { file?: File }) => Promise<any>;
+  deleteIncome: (id: string) => Promise<void>;
 
-  addPartner: (item: Omit<Partner, 'id'>) => void;
-  deletePartner: (id: string) => void;
+  addContract: (item: Omit<Contract, 'id'> & { file?: File }) => Promise<any>;
+  deleteContract: (id: string) => Promise<void>;
 
-  // ✅ DOSYA YÜKLEME DESTEĞİ EKLENDİ
-  addLibraryItem: (item: Omit<LibraryItem, 'id' | 'dateAdded'> & { file?: File }) => Promise<LibraryItem | null>;
+  addPartner: (item: Omit<Partner, 'id'>) => Promise<any>;
+  deletePartner: (id: string) => Promise<void>;
+
+  addLibraryItem: (item: Omit<LibraryItem, 'id' | 'dateAdded'> & { file?: File }) => Promise<any>;
   deleteLibraryItem: (id: string) => Promise<void>;
 
-  updateSocialMetric: (platform: string, data: Partial<SocialMetric>) => void;
-  
-  // Save current stats to history
+  updateSocialMetric: (platformId: string, metricName: string, updates: { currentWeek?: number, lastWeek?: number }) => void;
   archiveSocialStats: () => void;
-  deleteSocialHistory: (id: string) => void;
-}
+  deleteSocialHistory: (id: string) => Promise<void>;
 
-// Görev durumları
-export type TaskStatus = "beklemede" | "devam-ediyor" | "tamamlandi";
-
-// Görev öncelikleri
-export type Priority = "dusuk" | "orta" | "yuksek";
-
-// Görev arayüzü
-export interface Task {
-  id: string;
-  name: string;
-  assignee: string;
-  due_date: string;
-  status: TaskStatus;
-  priority?: Priority; // İsteğe bağlı
-}
-
-export type CalendarView = 'month' | 'week' | 'day';
-
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  description: string;
-  date: string; // YYYY-MM-DD formatında
-  startTime: string; // HH:mm formatında
-  endTime: string; // HH:mm formatında
-  color: string;
-  assignee: string;
-  type: 'meeting' | 'task' | 'event' | 'reminder';
-}
-
-export interface Income {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  category: string;
-  invoiceFile?: string;
-  invoiceUrl?: string;
-}
-
-export interface AppData {
-  // ... diğer özellikler
-  incomes: Income[];
-  // ... diğer özellikler
+  addCalendarEvent: (item: Omit<CalendarEvent, 'id'>) => Promise<any>;
+  updateCalendarEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<any>;
+  deleteCalendarEvent: (id: string) => Promise<void>;
 }

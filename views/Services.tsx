@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataProvider';
 import { Plus, Trash2, Building2, Stethoscope, Briefcase, CheckCircle, Tag } from 'lucide-react';
-import { ServiceItem } from '../types';
+import { ServiceItem, ServicePackage, CorporatePricing } from '../types';
 
 export const ServicesView: React.FC = () => {
   const { services, packages, corporatePricing, addService, deleteService, addPackage, deletePackage, updateCorporatePricing } = useData();
@@ -24,7 +24,10 @@ export const ServicesView: React.FC = () => {
   });
 
   const handleAddPackage = () => {
-    if (!newPackage.name || !newPackage.price) return;
+    if (!newPackage.name || !newPackage.price) {
+      alert('Lütfen paket adı ve fiyat girin!');
+      return;
+    }
     const featuresList = newPackage.featuresText.split('\n').filter(line => line.trim() !== '');
     addPackage({
       name: newPackage.name,
@@ -37,7 +40,10 @@ export const ServicesView: React.FC = () => {
   };
 
   const handleAddService = () => {
-    if (!newService.name || !newService.price || !newService.category) return;
+    if (!newService.name || !newService.price || !newService.category) {
+      alert('Lütfen tüm alanları doldurun!');
+      return;
+    }
     addService({
         name: newService.name,
         price: newService.price,

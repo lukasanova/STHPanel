@@ -17,7 +17,10 @@ import {
   Customer, 
   Task,
   CalendarEvent,
-  Partner
+  Partner,
+  ServiceItem,
+  ServicePackage,
+  CorporatePricing
 } from "../types";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -62,6 +65,31 @@ const initialSocialStats: SocialPlatform[] = [
   }
 ];
 
+// BAŞLANGIÇ KURUMSAL FİYATLANDIRMA
+const initialCorporatePricing: CorporatePricing[] = [
+  {
+    id: '1',
+    size: 'Küçük',
+    description: '1-10 arası çalışan',
+    basePrice: 5000,
+    adjustment: 0
+  },
+  {
+    id: '2',
+    size: 'Orta',
+    description: '11-50 arası çalışan',
+    basePrice: 15000,
+    adjustment: 0
+  },
+  {
+    id: '3',
+    size: 'Büyük',
+    description: '51+ çalışan',
+    basePrice: 35000,
+    adjustment: 0
+  }
+];
+
 // BAŞLANGIÇ CALENDAR EVENTS
 const initialCalendarEvents: CalendarEvent[] = [
   {
@@ -94,7 +122,7 @@ const initialData: AppData = {
   achievements: [],
   services: [],
   packages: [],
-  corporatePricing: [],
+  corporatePricing: initialCorporatePricing,
   contacts: [],
   notes: [],
   events: [],
@@ -134,6 +162,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: socialHistoryData } = await supabase.from("social_history").select("*");
         const { data: eventsData } = await supabase.from("events").select("*");
         const { data: meetingsData } = await supabase.from("meetings").select("*");
+        const { data: servicesData } = await supabase.from("services").select("*");
+        const { data: packagesData } = await supabase.from("packages").select("*");
+        const { data: corporatePricingData } = await supabase.from("corporate_pricing").select("*");
         
         // CALENDAR EVENTS'ı çek
         let calendarEventsData = [];
@@ -161,12 +192,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           invoiceFile: customer.invoice_file,
         })) || [];
 
-        // SOSYAL GEÇMİŞ VERİLERİNİ DÖNÜŞTÜR - DÜZELTİLDİ!
+        // SOSYAL GEÇMİŞ VERİLERİNİ DÖNÜŞTÜR
         const loadedSocialHistory = socialHistoryData?.map(entry => {
           try {
             let stats = [];
             if (entry.stats) {
-              // Eğer stats string ise parse et, değilse direkt kullan
               if (typeof entry.stats === 'string') {
                 stats = JSON.parse(entry.stats);
               } else {
@@ -236,6 +266,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           invoiceUrl: income.invoice_url,
         })) || [];
 
+        // HİZMET VERİLERİNİ DÖNÜŞTÜR
+        const formattedServices = servicesData?.map(service => ({
+          id: service.id,
+          name: service.name,
+          price: service.price,
+          category: service.category,
+        })) || [];
+
+        // PAKET VERİLERİNİ DÖNÜŞTÜR
+        const formattedPackages = packagesData?.map(pkg => ({
+          id: pkg.id,
+          name: pkg.name,
+          price: pkg.price,
+          target: pkg.target,
+          description: pkg.description || "",
+          features: pkg.features || [],
+        })) || [];
+
+        // KURUMSAL FİYATLANDIRMA VERİLERİNİ DÖNÜŞTÜR
+        const formattedCorporatePricing = corporatePricingData?.map(corp => ({
+          id: corp.id,
+          size: corp.size,
+          description: corp.description || "",
+          basePrice: corp.base_price,
+          adjustment: corp.adjustment,
+        })) || [];
+
         // localStorage'dan sosyal istatistikleri kontrol et
         const savedSocialStats = localStorage.getItem('socialStats');
         const currentSocialStats = savedSocialStats ? JSON.parse(savedSocialStats) : initialSocialStats;
@@ -255,6 +312,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           calendarEvents: formattedCalendarEvents.length > 0 ? formattedCalendarEvents : initialCalendarEvents,
           socialStats: currentSocialStats,
           socialHistory: loadedSocialHistory,
+          services: formattedServices || [],
+          packages: formattedPackages || [],
+          corporatePricing: formattedCorporatePricing.length > 0 ? formattedCorporatePricing : initialCorporatePricing,
         });
 
         console.log("✅ Tüm veriler başarıyla yüklendi!");
@@ -265,6 +325,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const savedCalendarEvents = localStorage.getItem('calendarEvents');
           const savedIncomes = localStorage.getItem('incomes');
           const savedExpenses = localStorage.getItem('expenses');
+          const savedServices = localStorage.getItem('services');
+          const savedPackages = localStorage.getItem('packages');
+          const savedCorporatePricing = localStorage.getItem('corporatePricing');
           
           if (savedCalendarEvents) {
             const calendarEvents = JSON.parse(savedCalendarEvents);
@@ -289,6 +352,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               expenses: expenses
             }));
           }
+          
+          if (savedServices) {
+            const services = JSON.parse(savedServices);
+            setData(prev => ({
+              ...prev,
+              services: services
+            }));
+          }
+          
+          if (savedPackages) {
+            const packages = JSON.parse(savedPackages);
+            setData(prev => ({
+              ...prev,
+              packages: packages
+            }));
+          }
+          
+          if (savedCorporatePricing) {
+            const corporatePricing = JSON.parse(savedCorporatePricing);
+            setData(prev => ({
+              ...prev,
+              corporatePricing: corporatePricing
+            }));
+          }
         } catch (localError) {
           console.error("❌ LocalStorage'dan veri yükleme hatası:", localError);
         }
@@ -309,7 +396,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const itemWithId = { ...item, id: generateId() };
       
       // Özel tablolar için localStorage desteği
-      if (table === "calendar_events" || table === "incomes" || table === "expenses") {
+      if (table === "calendar_events" || table === "incomes" || table === "expenses" || 
+          table === "services" || table === "packages" || table === "corporate_pricing") {
         try {
           const { data: inserted, error } = await supabase
             .from(table)
@@ -381,7 +469,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log(`✏️ ${table} güncelleniyor:`, id, updates);
     
     try {
-      if (table === "calendar_events" || table === "incomes" || table === "expenses") {
+      if (table === "calendar_events" || table === "incomes" || table === "expenses" ||
+          table === "services" || table === "packages" || table === "corporate_pricing") {
         try {
           const { data: updated, error } = await supabase
             .from(table)
@@ -465,7 +554,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteItem = async (table: string, id: string, key: keyof AppData) => {
     console.log(`🗑️ ${table} siliniyor:`, id);
     
-    if (table === "calendar_events" || table === "incomes" || table === "expenses") {
+    if (table === "calendar_events" || table === "incomes" || table === "expenses" ||
+        table === "services" || table === "packages" || table === "corporate_pricing") {
       try {
         const { error } = await supabase
           .from(table)
@@ -510,6 +600,77 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
 
     console.log(`✅ ${table} silindi:`, id);
+  };
+
+  /* ---------------- HİZMET FONKSİYONLARI ---------------- */
+  
+  const addService = async (item: Omit<ServiceItem, 'id'>) => {
+    console.log("➕ Hizmet ekleniyor:", item);
+    try {
+      const formattedItem = {
+        name: item.name,
+        price: item.price,
+        category: item.category,
+      };
+      return await addItem("services", formattedItem, "services");
+    } catch (error) {
+      console.error("❌ Hizmet ekleme hatası:", error);
+      throw error;
+    }
+  };
+
+  const deleteService = async (id: string) => {
+    console.log("🗑️ Hizmet siliniyor:", id);
+    return await deleteItem("services", id, "services");
+  };
+
+  /* ---------------- PAKET FONKSİYONLARI ---------------- */
+  
+  const addPackage = async (item: Omit<ServicePackage, 'id'>) => {
+    console.log("➕ Paket ekleniyor:", item);
+    try {
+      const formattedItem = {
+        name: item.name,
+        price: item.price,
+        target: item.target,
+        description: item.description,
+        features: item.features,
+      };
+      return await addItem("packages", formattedItem, "packages");
+    } catch (error) {
+      console.error("❌ Paket ekleme hatası:", error);
+      throw error;
+    }
+  };
+
+  const deletePackage = async (id: string) => {
+    console.log("🗑️ Paket siliniyor:", id);
+    return await deleteItem("packages", id, "packages");
+  };
+
+  /* ---------------- KURUMSAL FİYATLANDIRMA ---------------- */
+  
+  const updateCorporatePricing = async (id: string, updates: Partial<CorporatePricing>) => {
+    console.log("✏️ Kurumsal fiyatlandırma güncelleniyor:", id, updates);
+    
+    // Önce state'i güncelle
+    setData(prev => ({
+      ...prev,
+      corporatePricing: prev.corporatePricing.map(item => 
+        item.id === id ? { ...item, ...updates } : item
+      ),
+    }));
+    
+    // Sonra veritabanına kaydet
+    try {
+      const dbUpdates: any = {};
+      if (updates.basePrice !== undefined) dbUpdates.base_price = updates.basePrice;
+      if (updates.adjustment !== undefined) dbUpdates.adjustment = updates.adjustment;
+      
+      await updateItem("corporate_pricing", id, dbUpdates, "corporatePricing");
+    } catch (error) {
+      console.error("❌ Kurumsal fiyat güncelleme hatası:", error);
+    }
   };
 
   /* ---------------- CALENDAR EVENTS FONKSİYONLARI ---------------- */
@@ -1050,14 +1211,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         archiveSocialStats,
         deleteSocialHistory,
 
+        // HİZMETLER VE FİYATLANDIRMA
+        addService,
+        deleteService,
+        addPackage,
+        deletePackage,
+        updateCorporatePricing,
+
         // DİĞER FONKSİYONLAR
         addAchievement: () => {},
         deleteAchievement: () => {},
-        addService: () => {},
-        deleteService: () => {},
-        addPackage: () => {},
-        deletePackage: () => {},
-        updateCorporatePricing: () => {},
         addContact: () => {},
         deleteContact: () => {},
         addNote: () => {},
